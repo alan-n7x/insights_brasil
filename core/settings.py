@@ -127,3 +127,28 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {"format": "%(asctime)s %(levelname)s [%(name)s] %(message)s"},
+    },
+    "handlers": {
+        "ibge_file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": "logs/ibge.log",
+            "encoding": "utf-8",
+            "formatter": "default",
+        },
+    },
+    "loggers": {
+        "ibge": {
+            "handlers": ["ibge_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
