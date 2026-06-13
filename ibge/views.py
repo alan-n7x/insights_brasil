@@ -7,7 +7,7 @@ import requests
 from django.http import JsonResponse
 from .models import Estado, Municipio
 
-logger = logging.getLogger("ibge.views")
+logger = logging.getLogger(__name__)
 
 
 def estados(request):

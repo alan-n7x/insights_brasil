@@ -29,3 +29,28 @@ class Municipio(models.Model):
     )
 
     criado_em = models.DateTimeField(auto_now_add=True)
+
+
+class PopulacaoMunicipio(models.Model):
+
+    municipio = models.ForeignKey(
+        "Municipio", on_delete=models.CASCADE, related_name="populacoes"
+    )
+
+    ano = models.IntegerField()
+
+    populacao = models.BigIntegerField()
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["municipio", "ano"], name="unique_populacao_municipio_ano"
+            )
+        ]
+
+        ordering = ["municipio", "-ano"]
+
+    def __str__(self):
+        return f"{self.municipio.nome} - " f"{self.ano} - " f"{self.populacao}"
