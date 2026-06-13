@@ -35,7 +35,6 @@ class Command(BaseCommand):
 
         data = r.json()
 
-        # 🔥 mapa otimizado (string normalizada)
         municipios_map = {
             str(m.codigo_externo): m
             for m in Municipio.objects.all()
@@ -43,9 +42,11 @@ class Command(BaseCommand):
 
         series = data[0]["resultados"][0]["series"]
 
-        total_salvos = 0
+        total_criados = 0
+        total_atualizados = 0
+        total_ignorados = 0
 
-        with transaction.atomic():  # 🔥 performance + consistência
+        with transaction.atomic():
 
             for item in series:
 
@@ -55,24 +56,31 @@ class Command(BaseCommand):
                 municipio = municipios_map.get(codigo)
 
                 if not municipio:
+                    total_ignorados += 1
                     continue
 
-                # pega ano mais recente de forma segura
                 ano = max(serie.keys())
-                populacao = serie[ano]
+                populacao = int(serie[ano])
 
-                PopulacaoMunicipio.objects.update_or_create(
+                obj, created = PopulacaoMunicipio.objects.get_or_create(
                     municipio=municipio,
                     ano=int(ano),
-                    defaults={
-                        "populacao": int(populacao)
-                    }
+                    defaults={"populacao": populacao}
                 )
 
-                total_salvos += 1
+                if not created and obj.populacao != populacao:
+                    obj.populacao = populacao
+                    obj.save(update_fields=["populacao"])
+                    total_atualizados += 1
+
+                elif created:
+                    total_criados += 1
+
+                else:
+                    total_ignorados += 1
 
                 logger.info(
-                    "[sync_populacao] salvo municipio=%s codigo=%s ano=%s pop=%s",
+                    "[sync_populacao] municipio=%s codigo=%s ano=%s pop=%s",
                     municipio.nome,
                     codigo,
                     ano,
@@ -82,7 +90,9 @@ class Command(BaseCommand):
         fim = time.perf_counter()
 
         logger.info(
-            "[sync_populacao] FINALIZADO municipios=%s tempo=%.2fs",
-            total_salvos,
+            "[sync_populacao] FINALIZADO criados=%s atualizados=%s ignorados=%s tempo=%.2fs",
+            total_criados,
+            total_atualizados,
+            total_ignorados,
             fim - inicio,
         )
