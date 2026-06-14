@@ -1,6 +1,7 @@
 from django.urls import path
-from ibge.views.views import estados
+
+from ibge.views.estados import listar_estados_view
 
 urlpatterns = [
-    path("", estados, name="estados"),
+    path("", listar_estados_view, name="listar-estados"),
 ]

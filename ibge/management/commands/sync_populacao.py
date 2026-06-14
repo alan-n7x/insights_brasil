@@ -1,6 +1,7 @@
 import time
 import logging
 import requests
+from datetime import date
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -20,9 +21,12 @@ class Command(BaseCommand):
 
         logger.info("[sync_populacao] Iniciando coleta")
 
+        ano_fim = date.today().year
+        ano_inicio = ano_fim - 10
+
         url = (
             "https://servicodados.ibge.gov.br/api/v3/agregados/6579/"
-            "periodos/-1/variaveis/9324?localidades=N6[all]"
+            f"periodos/{ano_inicio}-{ano_fim}/variaveis/9324?localidades=N6[all]"
         )
 
         r = requests.get(url, timeout=60)
@@ -35,10 +39,7 @@ class Command(BaseCommand):
 
         data = r.json()
 
-        municipios_map = {
-            str(m.codigo_externo): m
-            for m in Municipio.objects.all()
-        }
+        municipios_map = {str(m.codigo_externo): m for m in Municipio.objects.all()}
 
         series = data[0]["resultados"][0]["series"]
 
@@ -47,7 +48,6 @@ class Command(BaseCommand):
         total_ignorados = 0
 
         with transaction.atomic():
-
             for item in series:
 
                 codigo = item["localidade"]["id"]
@@ -59,33 +59,35 @@ class Command(BaseCommand):
                     total_ignorados += 1
                     continue
 
-                ano = max(serie.keys())
-                populacao = int(serie[ano])
+                # 🔥 AGORA SIM: múltiplos anos
+                for ano, populacao in serie.items():
 
-                obj, created = PopulacaoMunicipio.objects.get_or_create(
-                    municipio=municipio,
-                    ano=int(ano),
-                    defaults={"populacao": populacao}
-                )
+                    populacao = int(populacao)
 
-                if not created and obj.populacao != populacao:
-                    obj.populacao = populacao
-                    obj.save(update_fields=["populacao"])
-                    total_atualizados += 1
+                    obj, created = PopulacaoMunicipio.objects.get_or_create(
+                        municipio=municipio,
+                        ano=int(ano),
+                        defaults={"populacao": populacao},
+                    )
 
-                elif created:
-                    total_criados += 1
+                    if not created and obj.populacao != populacao:
+                        obj.populacao = populacao
+                        obj.save(update_fields=["populacao"])
+                        total_atualizados += 1
 
-                else:
-                    total_ignorados += 1
+                    elif created:
+                        total_criados += 1
 
-                logger.info(
-                    "[sync_populacao] municipio=%s codigo=%s ano=%s pop=%s",
-                    municipio.nome,
-                    codigo,
-                    ano,
-                    populacao,
-                )
+                    else:
+                        total_ignorados += 1
+
+                    logger.info(
+                        "[sync_populacao] municipio=%s codigo=%s ano=%s pop=%s",
+                        municipio.nome,
+                        codigo,
+                        ano,
+                        populacao,
+                    )
 
         fim = time.perf_counter()
 

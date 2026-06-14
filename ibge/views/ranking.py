@@ -1,22 +1,30 @@
 import logging
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
 
 logger = logging.getLogger(__name__)
 
 
-# Rest Framework
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
-
-
-from ibge.services.ranking import ranking_estados
+from ibge.services.ranking import (
+    ranking_estados,
+    ultimo_ano_disponivel,
+)
 
 
 @api_view(["GET"])
 def ranking_estados_view(request):
-    logger.info("[ranking_estados_view] Iniciando consulta de ranking de estados")
-    ano = int(request.GET.get("ano", 2025))
 
-    print(f"Ranking de estados para o ano {ano}")
+    logger.info("[ranking_estados_view] Iniciando consulta")
+
+    ano = request.GET.get("ano")
+
+    if ano:
+
+        ano = int(ano)
+
+    else:
+
+        ano = ultimo_ano_disponivel()
 
     data = ranking_estados(ano)
 
