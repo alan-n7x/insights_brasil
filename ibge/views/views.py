@@ -5,7 +5,7 @@ from django.shortcuts import render
 import requests
 
 from django.http import JsonResponse
-from .models import Estado, Municipio
+from ..models import Estado, Municipio
 
 logger = logging.getLogger(__name__)
 
