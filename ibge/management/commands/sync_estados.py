@@ -3,7 +3,9 @@ import requests
 
 from django.core.management.base import BaseCommand
 
-from ibge.models import Estado
+from ibge.domain.repositories.estado_repository import EstadoRepository
+from ibge.infra.ibge_client import IBGEClient
+from ibge.domain.services.estados_service import EstadosService
 
 logger = logging.getLogger(__name__)
 
@@ -14,43 +16,25 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
 
-        url = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
+        logger.info("[sync_estados] Sincronização iniciada")
 
-        try:
+        service = EstadosService(IBGEClient())
 
-            logger.info("[sync_estados] Sincronização iniciada")
+        repository = EstadoRepository()
 
-            response = requests.get(url, timeout=10)
+        estados = service.fetch_estados()
 
-            response.raise_for_status()
+        criados = 0
 
-            estados = response.json()
+        for estado in estados:
 
-            criados = 0
+            _, created = repository.save(estado)
 
-            for estado in estados:
+            if created:
+                criados += 1
 
-                _, created = Estado.objects.get_or_create(
-                    codigo_externo=estado["id"],
-                    sigla=estado["sigla"],
-                    defaults={
-                        "nome": estado["nome"],
-                        "regiao": estado["regiao"]["nome"],
-                    },
-                )
-
-                if created:
-                    criados += 1
-
-            logger.info(
-                "[sync_estados] Recebidos=%s Criados=%s",
-                len(estados),
-                criados,
-            )
-
-        except requests.RequestException as e:
-
-            logger.exception(
-                "[sync_estados] erro=%s",
-                str(e)
-            )
+        logger.info(
+            "[sync_estados] Recebidos=%s Criados=%s",
+            len(estados),
+            criados,
+        )

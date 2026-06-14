@@ -1,10 +1,10 @@
 from django.http import JsonResponse
 
-from ibge.services.estado_service import listar_estados
+from ibge.domain.repositories.estado_repository import EstadoRepository
 
 
 def listar_estados_view(request):
 
-    estados = listar_estados()
+    estados = EstadoRepository().listar()
 
     return JsonResponse(list(estados), safe=False)

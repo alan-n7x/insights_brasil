@@ -194,7 +194,7 @@ ibge
 apps
 
 └── streamlit
-    ├── app.py
+    ├── streamlit_app.py
     └── charts
 ```
 

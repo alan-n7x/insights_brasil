@@ -1,100 +1,63 @@
-import time
 import logging
-import requests
-from datetime import date
+import time
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from ibge.models import Municipio, PopulacaoMunicipio
+from ibge.infra.ibge_client import IBGEClient
+from ibge.infra.agregados_client import IBGEAgregadosClient
+from ibge.domain.services.populacao_service import PopulacaoService
+from ibge.domain.repositories.populacao_repository import PopulacaoRepository
+from ibge.models import Municipio
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
 
-    help = "Coleta população dos municípios (IBGE)"
-
     def handle(self, *args, **kwargs):
 
         inicio = time.perf_counter()
 
-        logger.info("[sync_populacao] Iniciando coleta")
+        logger.info("[sync_populacao] Iniciando")
 
-        ano_fim = date.today().year
-        ano_inicio = ano_fim - 10
+        base_client = IBGEClient()
+        agregados_client = IBGEAgregadosClient(base_client)
 
-        url = (
-            "https://servicodados.ibge.gov.br/api/v3/agregados/6579/"
-            f"periodos/{ano_inicio}-{ano_fim}/variaveis/9324?localidades=N6[all]"
-        )
+        service = PopulacaoService(agregados_client)
+        repository = PopulacaoRepository()
 
-        r = requests.get(url, timeout=60)
-
-        logger.info(
-            "[sync_populacao] IBGE status=%s tamanho=%s",
-            r.status_code,
-            len(r.text),
-        )
-
-        data = r.json()
+        dados = service.fetch_populacao()
 
         municipios_map = {str(m.codigo_externo): m for m in Municipio.objects.all()}
 
-        series = data[0]["resultados"][0]["series"]
-
-        total_criados = 0
-        total_atualizados = 0
-        total_ignorados = 0
+        created = updated = ignored = 0
 
         with transaction.atomic():
-            for item in series:
 
-                codigo = item["localidade"]["id"]
-                serie = item["serie"]
+            for item in dados:
 
-                municipio = municipios_map.get(codigo)
+                municipio = municipios_map.get(item["municipio_id"])
 
                 if not municipio:
-                    total_ignorados += 1
+                    ignored += 1
                     continue
 
-                # 🔥 AGORA SIM: múltiplos anos
-                for ano, populacao in serie.items():
+                result = repository.save(municipio, item["ano"], item["populacao"])
 
-                    populacao = int(populacao)
-
-                    obj, created = PopulacaoMunicipio.objects.get_or_create(
-                        municipio=municipio,
-                        ano=int(ano),
-                        defaults={"populacao": populacao},
-                    )
-
-                    if not created and obj.populacao != populacao:
-                        obj.populacao = populacao
-                        obj.save(update_fields=["populacao"])
-                        total_atualizados += 1
-
-                    elif created:
-                        total_criados += 1
-
-                    else:
-                        total_ignorados += 1
-
-                    logger.info(
-                        "[sync_populacao] municipio=%s codigo=%s ano=%s pop=%s",
-                        municipio.nome,
-                        codigo,
-                        ano,
-                        populacao,
-                    )
+                if result == "created":
+                    created += 1
+                elif result == "updated":
+                    updated += 1
+                else:
+                    ignored += 1
 
         fim = time.perf_counter()
 
         logger.info(
-            "[sync_populacao] FINALIZADO criados=%s atualizados=%s ignorados=%s tempo=%.2fs",
-            total_criados,
-            total_atualizados,
-            total_ignorados,
+            "[sync_populacao] finalizado created=%s updated=%s ignored=%s tempo=%.2fs",
+            created,
+            updated,
+            ignored,
             fim - inicio,
         )

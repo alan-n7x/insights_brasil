@@ -1,109 +1,60 @@
 import logging
-import requests
 import time
 
 from django.core.management.base import BaseCommand
 
-from ibge.models import Estado, Municipio
+from ibge.infra.ibge_client import IBGEClient
+from ibge.domain.services.municipios_service import MunicipiosService
+from ibge.domain.repositories.municipios_repository import MunicipioRepository
+from ibge.models import Estado
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
 
-    help = "Sincroniza municípios do IBGE"
-
     def handle(self, *args, **kwargs):
 
         inicio = time.perf_counter()
 
-        logger.info("[sync_municipios] Sincronização iniciada")
+        logger.info("[sync_municipios] Iniciando sync")
 
-        url = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
+        service = MunicipiosService(IBGEClient())
+        repository = MunicipioRepository()
 
-        try:
+        municipios = service.fetch_municipios()
 
-            response = requests.get(url, timeout=30)
+        criados = 0
+        ignorados = 0
 
-            response.raise_for_status()
+        for m in municipios:
 
-            municipios = response.json()
+            try:
 
-            criados = 0
-            ignorados = 0
+                estado = Estado.objects.get(codigo_externo=m["estado_id"])
 
-            for municipio in municipios:
+                _, created = repository.save(m, estado)
 
-                try:
-
-                    microrregiao = municipio.get("microrregiao")
-
-                    if not microrregiao:
-
-                        ignorados += 1
-
-                        logger.warning(
-                            "[sync_municipios] Município sem microrregião "
-                            "id=%s nome=%s",
-                            municipio["id"],
-                            municipio["nome"],
-                        )
-
-                        continue
-
-                    codigo_estado = municipio["microrregiao"]["mesorregiao"]["UF"]["id"]
-
-                    estado = Estado.objects.get(codigo_externo=codigo_estado)
-
-                    _, created = Municipio.objects.get_or_create(
-                        codigo_externo=municipio["id"],
-                        defaults={
-                            "nome": municipio["nome"],
-                            "estado": estado,
-                        },
-                    )
-
-                    if created:
-                        criados += 1
-
-                    else:
-                        ignorados += 1
-
-                except Estado.DoesNotExist:
-
+                if created:
+                    criados += 1
+                else:
                     ignorados += 1
 
-                    logger.warning(
-                        "[sync_municipios] Estado não encontrado "
-                        "municipio=%s codigo=%s",
-                        municipio.get("nome"),
-                        municipio.get("id"),
-                    )
+            except Estado.DoesNotExist:
 
-                except Exception:
+                ignorados += 1
 
-                    ignorados += 1
+                logger.warning(
+                    "[sync_municipios] estado não encontrado municipio=%s",
+                    m["nome"],
+                )
 
-                    logger.exception(
-                        "[sync_municipios] erro municipio=%s codigo=%s",
-                        municipio.get("nome"),
-                        municipio.get("id"),
-                    )
+        fim = time.perf_counter()
 
-            fim = time.perf_counter()
-
-            logger.info(
-                "[sync_municipios] FINALIZADO "
-                "recebidos=%s "
-                "criados=%s "
-                "ignorados=%s "
-                "tempo=%.2fs",
-                len(municipios),
-                criados,
-                ignorados,
-                fim - inicio,
-            )
-
-        except requests.RequestException:
-
-            logger.exception("[sync_municipios] erro ao consultar API do IBGE")
+        logger.info(
+            "[sync_municipios] FINALIZADO recebidos=%s criados=%s ignorados=%s tempo=%.2fs",
+            len(municipios),
+            criados,
+            ignorados,
+            fim - inicio,
+        )
