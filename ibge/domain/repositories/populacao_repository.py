@@ -21,7 +21,3 @@ class PopulacaoRepository:
             return "created"
 
         return "ignored"
-
-    def ultimo_ano_disponivel(self):
-
-        return PopulacaoMunicipio.objects.aggregate(ultimo_ano=Max("ano"))["ultimo_ano"]
