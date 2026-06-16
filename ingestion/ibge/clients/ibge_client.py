@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class IBGEClient:
 
-    BASE_URL = "https://servicodados.ibge.gov.br/api"
+    BASE_URL = "https://servicodados.ibge.gov.br/api/"
 
     def __init__(self):
 

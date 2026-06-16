@@ -2,7 +2,7 @@
 
 from django.core.management.base import BaseCommand
 
-from ibge.domain.repositories.estado_repository import EstadoRepository
+from ingestion.ibge.repositories.estado_repository import EstadoRepository
 
 
 class Command(BaseCommand):

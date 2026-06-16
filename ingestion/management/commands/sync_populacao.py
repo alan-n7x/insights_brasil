@@ -4,10 +4,10 @@ import time
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from ibge.infra.ibge_client import IBGEClient
-from ibge.infra.agregados_client import IBGEAgregadosClient
-from ibge.domain.services.populacao_service import PopulacaoService
-from ibge.domain.repositories.populacao_repository import PopulacaoRepository
+from ingestion.ibge.clients.ibge_client import IBGEClient
+from ingestion.ibge.clients.sidra_client import IBGESidraClient
+from ingestion.ibge.services.populacao_sync_service import PopulacaoService
+from ingestion.ibge.repositories.populacao_repository import PopulacaoRepository
 from ibge.models import Municipio
 
 logger = logging.getLogger(__name__)
@@ -22,14 +22,14 @@ class Command(BaseCommand):
         logger.info("[sync_populacao] Iniciando")
 
         base_client = IBGEClient()
-        agregados_client = IBGEAgregadosClient(base_client)
+        agregados_client = IBGESidraClient(base_client)
 
         service = PopulacaoService(agregados_client)
         repository = PopulacaoRepository()
 
         dados = service.fetch_populacao()
 
-        municipios_map = {str(m.codigo_externo): m for m in Municipio.objects.all()}
+        municipios_map = {str(m.ibge_id): m for m in Municipio.objects.all()}
 
         created = updated = ignored = 0
 

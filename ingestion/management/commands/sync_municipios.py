@@ -3,10 +3,10 @@ import time
 
 from django.core.management.base import BaseCommand
 
-from ibge.infra.ibge_client import IBGEClient
-from ibge.domain.services.municipios_service import MunicipiosService
-from ibge.domain.repositories.municipios_repository import MunicipioRepository
-from ibge.models import Estado
+from ingestion.ibge.clients.ibge_client import IBGEClient
+from ingestion.ibge.services.municipio_sync_service import MunicipiosService
+from ingestion.ibge.repositories.municipios_repository import MunicipioRepository
+from ingestion.ibge.resolvers.estado_resolver import EstadoResolver
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ class Command(BaseCommand):
 
         service = MunicipiosService(IBGEClient())
         repository = MunicipioRepository()
+        resolver = EstadoResolver()
 
         municipios = service.fetch_municipios()
 
@@ -29,25 +30,22 @@ class Command(BaseCommand):
 
         for m in municipios:
 
-            try:
+            estado = resolver.get(m["estado_id"])
 
-                estado = Estado.objects.get(codigo_externo=m["estado_id"])
-
-                _, created = repository.save(m, estado)
-
-                if created:
-                    criados += 1
-                else:
-                    ignorados += 1
-
-            except Estado.DoesNotExist:
-
+            if not estado:
                 ignorados += 1
-
                 logger.warning(
                     "[sync_municipios] estado não encontrado municipio=%s",
                     m["nome"],
                 )
+                continue
+
+            _, created = repository.save(m, estado)
+
+            if created:
+                criados += 1
+            else:
+                ignorados += 1
 
         fim = time.perf_counter()
 

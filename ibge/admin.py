@@ -12,7 +12,7 @@ class EstadoAdmin(admin.ModelAdmin):
 
 @admin.register(Municipio)
 class MunicipioAdmin(admin.ModelAdmin):
-    list_display = ("id", "nome", "codigo_externo", "estado")
+    list_display = ("id", "nome", "ibge_id", "estado")
     search_fields = ("nome",)
 
 
