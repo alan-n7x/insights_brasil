@@ -7,23 +7,55 @@ class MunicipioTransformer:
 
     def transform(self, m):
 
-        logger.debug("[MunicipioTransformer] %s", m.get("nome"))
+        logger.debug(
+            "[MunicipioTransformer] Transformando municipio=%s",
+            m.get("nome"),
+        )
 
+        # Estrutura antiga
         microrregiao = m.get("microrregiao") or {}
         mesorregiao = microrregiao.get("mesorregiao") or {}
-        uf = mesorregiao.get("UF") or {}
 
+        # Estrutura nova
         regiao_imediata = m.get("regiao-imediata") or {}
-        regiao_intermediaria = regiao_imediata.get("regiao-intermediaria") or {}
+        regiao_intermediaria = (
+            regiao_imediata.get("regiao-intermediaria") or {}
+        )
+
+        # UF pode vir por qualquer um dos caminhos
+        uf = (
+            mesorregiao.get("UF")
+            or regiao_intermediaria.get("UF")
+            or {}
+        )
+
         regiao = uf.get("regiao") or {}
 
+        estado_id = uf.get("id")
+
+        # Investigação
+        if estado_id is None:
+
+            logger.warning(
+                (
+                    "[MunicipioTransformer] UF não encontrada "
+                    "municipio=%s "
+                    "ibge_id=%s "
+                    "payload=%s"
+                ),
+                m.get("nome"),
+                m.get("id"),
+                m,
+            )
+
         return {
+
             # obrigatórios
             "ibge_id": m.get("id"),
             "nome": m.get("nome"),
-            "estado_id": uf.get("id"),
+            "estado_id": estado_id,
 
-            # opcionais (NUNCA quebram o pipeline)
+            # opcionais
             "microrregiao_id": microrregiao.get("id"),
             "microrregiao_nome": microrregiao.get("nome"),
 
