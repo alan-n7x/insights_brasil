@@ -29,9 +29,6 @@ class Estado(models.Model):
         return f"{self.nome} ({self.sigla})"
 
 
-from django.db import models
-
-
 class Municipio(models.Model):
 
     ibge_id = models.IntegerField(unique=True, db_index=True)
@@ -39,7 +36,7 @@ class Municipio(models.Model):
 
     estado = models.ForeignKey(
         "Estado",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="municipios",
         db_index=True,
     )
@@ -98,3 +95,44 @@ class PopulacaoMunicipio(models.Model):
 
     def __str__(self):
         return f"{self.municipio.nome} - " f"{self.ano} - " f"{self.populacao}"
+
+
+class PIBMunicipio(models.Model):
+
+    municipio = models.ForeignKey(
+        "Municipio",
+        on_delete=models.PROTECT,
+        related_name="pibs",
+    )
+
+    ano = models.IntegerField()
+
+    valor = models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "municipio",
+                    "ano",
+                ],
+                name="unique_pib_municipio_ano",
+            )
+        ]
+
+        ordering = [
+            "municipio",
+            "-ano",
+        ]
+
+    def __str__(self):
+
+        return f"{self.municipio.nome}" f" - {self.ano}" f" - {self.valor}"
