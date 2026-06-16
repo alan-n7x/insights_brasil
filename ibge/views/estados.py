@@ -1,15 +1,7 @@
 from django.http import JsonResponse
-from ibge.models import Estado
+from ibge.queries.estados_queries import listar_estados
 
 
 def listar_estados_view(request):
-
-    estados = Estado.objects.all().values(
-        "id",
-        "ibge_id",
-        "nome",
-        "sigla",
-        "regiao",
-    )
-
-    return JsonResponse(list(estados), safe=False)
+    data = list(listar_estados())
+    return JsonResponse(data, safe=False)

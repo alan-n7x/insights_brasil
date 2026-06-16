@@ -1,56 +1,66 @@
-from charts.charts import bar_ranking
-
 import streamlit as st
 import requests
 import pandas as pd
 
+API_ANOS = "http://127.0.0.1:8000/api/ibge/populacao/anos/"
+API_RANKING = "http://127.0.0.1:8000/api/ibge/populacao/ranking-estados/"
 
-API_ANOS = "http://127.0.0.1:8000/api/ibge/anos/"
-API_RANKING = "http://127.0.0.1:8000/api/ibge/ranking/estados/"
 
+st.title("📊 IBGE Dashboard - População")
 
-# anos disponíveis
+# =========================
+# ANOS
+# =========================
+response = requests.get(API_ANOS)
 
-anos = requests.get(API_ANOS).json()
+if response.status_code != 200:
+    st.error("Erro ao buscar anos da API")
+    st.stop()
+
+anos = response.json()
+
+if not anos:
+    st.warning("Nenhum ano disponível")
+    st.stop()
 
 ano = st.selectbox(
     "Selecione o ano",
-    anos,
+    sorted(anos),
     index=len(anos) - 1
 )
 
-
-# ranking do ano selecionado
-
-data = requests.get(
+# =========================
+# RANKING
+# =========================
+response = requests.get(
     API_RANKING,
     params={"ano": ano}
-).json()
+)
 
+if response.status_code != 200:
+    st.error("Erro ao buscar ranking")
+    st.stop()
+
+data = response.json()
 
 df = pd.DataFrame(data)
 
+if df.empty:
+    st.warning("Sem dados para esse ano")
+    st.stop()
 
-df = df.rename(
-    columns={
-        "estado": "estado",
-        "total": "populacao"
-    }
-)
+df = df.rename(columns={
+    "estado": "Estado",
+    "total": "População"
+})
 
+df = df.sort_values("População", ascending=False)
 
-df = df.sort_values(
-    "populacao",
-    ascending=False
-)
+# =========================
+# VISUALIZAÇÃO
+# =========================
+st.subheader(f"🏆 Ranking Populacional - {ano}")
 
+st.dataframe(df)
 
-st.title("Ranking Populacional IBGE")
-
-
-bar_ranking(
-    df,
-    x="estado",
-    y="populacao",
-    title=f"Estados mais populosos - {ano}"
-)
+st.bar_chart(df.set_index("Estado"))

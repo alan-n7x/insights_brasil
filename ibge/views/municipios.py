@@ -1,15 +1,7 @@
 from django.http import JsonResponse
-
-from ibge.models import Municipio
+from ibge.queries.municipios_queries import listar_municipios
 
 
 def listar_municipios_view(request):
-    m = Municipio.objects.all()
-    municipios = m.values(
-        "id",
-        "ibge_id",
-        "nome",
-        "estado_id",
-    )
-
-    return JsonResponse(list(municipios), safe=False)
+    data = list(listar_municipios())
+    return JsonResponse(data, safe=False)
