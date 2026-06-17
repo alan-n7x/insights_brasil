@@ -1,20 +1,50 @@
-import requests
+from unittest.mock import Mock, patch
 
-from django.test import TestCase
+from django.test import SimpleTestCase
+
+from ingestion.ibge.clients.ibge_client import IBGEClient
 
 
-class TestIBGEAPI(TestCase):
+class IBGEClientTest(SimpleTestCase):
 
-    def test_conexao_ibge_estados(self):
+    @patch("ingestion.ibge.clients.ibge_client.requests.Session")
+    def test_get_retorna_json_da_api(self, session_class):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = [{"id": 35, "nome": "São Paulo"}]
+        response.raise_for_status.return_value = None
 
-        url = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
+        session = Mock()
+        session.get.return_value = response
+        session_class.return_value = session
 
-        response = requests.get(url, timeout=10)
+        client = IBGEClient()
+        data = client.get("v1/localidades/estados")
 
-        self.assertEqual(response.status_code, 200)
+        session.get.assert_called_once_with(
+            "https://servicodados.ibge.gov.br/api/v1/localidades/estados",
+            params=None,
+            timeout=10,
+        )
+        response.raise_for_status.assert_called_once()
+        self.assertEqual(data, [{"id": 35, "nome": "São Paulo"}])
 
-        data = response.json()
+    @patch("ingestion.ibge.clients.ibge_client.requests.Session")
+    def test_get_repassa_parametros(self, session_class):
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = []
+        response.raise_for_status.return_value = None
 
-        self.assertTrue(isinstance(data, list))
+        session = Mock()
+        session.get.return_value = response
+        session_class.return_value = session
 
-        self.assertGreater(len(data), 0)
+        client = IBGEClient()
+        client.get("v3/agregados", params={"localidades": "N6[all]"})
+
+        session.get.assert_called_once_with(
+            "https://servicodados.ibge.gov.br/api/v3/agregados",
+            params={"localidades": "N6[all]"},
+            timeout=10,
+        )

@@ -2,210 +2,122 @@
 
 ## Objetivo
 
-O projeto Insights Brasil tem como objetivo coletar dados públicos do IBGE, armazená-los em banco de dados e disponibilizá-los através de APIs e dashboards interativos.
-
----
+O Insights Brasil coleta dados públicos do IBGE, persiste esses dados em banco
+local e os disponibiliza por meio de APIs e dashboards interativos.
 
 ## Fluxo Geral
 
 ```text
-IBGE
-
-↓
-
-Commands de Coleta
-
-↓
-
-Banco de Dados
-
-↓
-
-Services
-
-↓
-
-Views REST
-
-↓
-
-Streamlit
+IBGE/SIDRA
+-> commands de coleta
+-> banco de dados
+-> queries e services
+-> views JSON
+-> Streamlit
 ```
 
----
+## Camadas
 
-## Commands
+### Domínio IBGE
 
-Os commands são responsáveis pela coleta e persistência dos dados.
-
-Exemplos:
-
-* sync_estados
-* sync_municipios
-* sync_populacao
+O app `ibge` concentra os modelos, consultas, views e URLs relacionados aos
+dados territoriais e indicadores.
 
 Responsabilidades:
 
-* Consultar a API do IBGE;
-* Validar os dados;
-* Persistir no banco;
-* Atualizar registros existentes;
-* Registrar logs de execução.
+- Modelar estados, municípios e indicadores.
+- Expor endpoints JSON.
+- Agregar dados para rankings e séries históricas.
+- Manter as views sem dependência direta das APIs externas.
 
-Exemplo:
+### Ingestão
+
+O app `ingestion` concentra a coleta e normalização dos dados.
+
+Responsabilidades:
+
+- Consultar APIs externas do IBGE/SIDRA.
+- Transformar payloads externos para o formato interno.
+- Resolver dependências, como estado ou município existente.
+- Persistir registros com operações idempotentes.
+- Registrar logs de execução.
+
+Exemplos de comandos:
 
 ```bash
 python manage.py sync_estados
-
-python manage.py sync_municipios
-
-python manage.py sync_populacao
+python manage.py sync_indicator --indicator POPULACAO --inicio 2022
 ```
 
----
+Os comandos antigos de indicadores, como `sync_populacao` e `sync_pib`, ficam na
+pasta `ingestion/management/commands/legacy/`. O fluxo recomendado para
+indicadores é o command genérico `sync_indicator`.
 
-## Banco de Dados
+### Banco de Dados
 
-O banco armazena os dados históricos.
+As principais entidades são:
 
-Principais tabelas:
+- `Estado`: unidade federativa.
+- `Municipio`: município vinculado a um estado.
+- `Indicador`: catálogo de indicadores, como `POPULACAO` ou `PIB`.
+- `IndicadorMunicipio`: tabela fato com valor de um indicador por município e ano.
 
-### Estado
+A tabela `IndicadorMunicipio` é a base analítica do projeto. Ela permite
+adicionar novos indicadores sem criar uma tabela específica para cada métrica.
 
-* codigo_externo
-* nome
-* sigla
-* regiao
+### API
 
-### Municipio
+As views expõem dados em JSON.
 
-* codigo_externo
-* nome
-* estado
+Endpoints principais:
 
-### PopulacaoMunicipio
+```text
+/api/ibge/estados/
+/api/ibge/municipios/
+/api/ibge/populacao/anos/
+/api/ibge/populacao/ranking-estados/
+/api/ibge/populacao/evolucao/
+```
 
-* municipio
-* ano
-* populacao
+As views devem consultar dados já persistidos. Elas não devem chamar diretamente
+as APIs externas do IBGE.
 
-Essa estrutura permite análises históricas e comparações entre períodos.
+### Streamlit
 
----
-
-## Services
-
-Os services contêm as regras de negócio.
-
-Exemplos:
-
-* estado_service
-* municipio_service
-* ranking_service
-* ano_service
-
-Responsabilidades:
-
-* Consultar dados do banco;
-* Realizar agregações;
-* Criar rankings;
-* Definir regras de negócio;
-* Preparar dados para as views.
-
----
-
-## Views
-
-As views expõem os dados em formato JSON.
-
-Exemplos:
-
-* /api/ibge/estados/
-* /api/ibge/municipios/
-* /api/ibge/anos/
-* /api/ibge/ranking/estados/
-
-As views não acessam diretamente o IBGE.
-
-Toda informação deve vir do banco através dos services.
-
----
-
-## Streamlit
-
-O Streamlit é responsável apenas pela visualização.
-
-Fluxo:
+O Streamlit é responsável pela visualização.
 
 ```text
 Usuário
-
-↓
-
-Streamlit
-
-↓
-
-API Django
-
-↓
-
-JSON
-
-↓
-
-DataFrame
-
-↓
-
-Gráfico
+-> Streamlit
+-> API Django
+-> JSON
+-> DataFrame
+-> gráfico
 ```
 
-O Streamlit não acessa diretamente:
+O dashboard não deve acessar diretamente:
 
-* Banco de dados;
-* API do IBGE;
-* Models do Django.
-
-Ele apenas consome a API REST.
-
----
+- Banco de dados.
+- APIs externas do IBGE.
+- Models do Django.
 
 ## Estrutura de Pastas
 
 ```text
-insights_brasil
-
-ibge
-
-├── management
-│   └── commands
-│
-├── models
-│
-├── services
-│
-├── views
-│
-├── urls
-│
-└── tests
-
-apps
-
-└── streamlit
-    ├── streamlit_app.py
-    └── charts
+insights_brasil/
+  core/                 Configuração Django
+  ibge/                 Domínio, models, queries, views e urls
+  ingestion/            Coleta, transformação e persistência
+  apps/streamlit/       Dashboard
+  docs/                 Documentação técnica
+  sql/                  Consultas auxiliares
 ```
 
----
+## Próximos Passos Técnicos
 
-## Próximos Passos
-
-* Indicadores de crescimento populacional;
-* Ranking de crescimento por estado;
-* Evolução ano a ano por município;
-* Cache para consultas frequentes;
-* Pré-cálculo de indicadores;
-* Projeções populacionais futuras;
-* Dashboard interativo com múltiplos gráficos.
+- Ampliar testes unitários para transformers, services e queries.
+- Criar endpoints genéricos para indicadores além de população.
+- Adicionar cache para consultas frequentes.
+- Pré-calcular agregações muito usadas.
+- Melhorar filtros do dashboard Streamlit.
+- Preparar configuração de produção com variáveis de ambiente.

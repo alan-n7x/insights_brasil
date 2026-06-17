@@ -1,34 +1,34 @@
-import streamlit as st
-import requests
-import pandas as pd
+import os
+
 import altair as alt
+import pandas as pd
+import requests
+import streamlit as st
 
-API_ANOS = "http://127.0.0.1:8000/api/ibge/populacao/anos/"
-API_RANKING = "http://127.0.0.1:8000/api/ibge/populacao/ranking-estados/"
+
+API_BASE_URL = os.getenv("INSIGHTS_API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+API_ANOS = f"{API_BASE_URL}/api/ibge/populacao/anos/"
+API_RANKING = f"{API_BASE_URL}/api/ibge/populacao/ranking-estados/"
 
 
-st.title("📊 IBGE Dashboard - População")
+st.title("IBGE Dashboard - População")
 
 
 # =========================
 # ANOS DISPONÍVEIS
 # =========================
 
-response = requests.get(API_ANOS)
+response = requests.get(API_ANOS, timeout=10)
 
 if response.status_code != 200:
-
     st.error("Erro ao buscar anos da API")
-
     st.stop()
 
 
 anos = response.json()
 
 if not anos:
-
     st.warning("Nenhum ano disponível")
-
     st.stop()
 
 
@@ -47,13 +47,12 @@ response = requests.get(
     API_RANKING,
     params={
         "ano": ano,
-    }
+    },
+    timeout=10,
 )
 
 if response.status_code != 200:
-
     st.error("Erro ao buscar ranking")
-
     st.stop()
 
 
@@ -63,13 +62,9 @@ df = pd.DataFrame(data)
 
 
 if df.empty:
-
     st.warning("Sem dados")
-
     st.stop()
 
-
-# Renomeia colunas
 
 df = df.rename(
     columns={
@@ -79,14 +74,8 @@ df = df.rename(
 )
 
 
-# Garante tipo numérico
+df["População"] = pd.to_numeric(df["População"])
 
-df["População"] = pd.to_numeric(
-    df["População"]
-)
-
-
-# Ordena
 
 df = df.sort_values(
     "População",
@@ -98,9 +87,7 @@ df = df.sort_values(
 # TABELA
 # =========================
 
-st.subheader(
-    f"🏆 Ranking Populacional - {ano}"
-)
+st.subheader(f"Ranking Populacional - {ano}")
 
 st.dataframe(
     df,
@@ -116,23 +103,19 @@ chart = (
     alt.Chart(df)
     .mark_bar()
     .encode(
-
         x=alt.X(
             "População:Q",
             title="População",
         ),
-
         y=alt.Y(
             "Estado:N",
             sort="-x",
             title="Estado",
         ),
-
         tooltip=[
             "Estado",
             "População",
-        ]
-
+        ],
     )
 )
 
