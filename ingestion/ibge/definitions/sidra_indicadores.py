@@ -8,6 +8,6 @@ class IndicadorSIDRA:
     nome: str
 
 
-POPULACAO = IndicadorSIDRA(agregado=6579, variavel=9324, nome="População")
+POPULACAO = IndicadorSIDRA(agregado=6579, variavel=9324, nome="POPULACAO")
 
 PIB = IndicadorSIDRA(agregado=5938, variavel=37, nome="PIB")

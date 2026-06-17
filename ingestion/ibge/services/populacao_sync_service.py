@@ -1,53 +1,48 @@
 import logging
-from datetime import date
+
+from ingestion.ibge.definitions.sidra_indicadores import POPULACAO
 
 logger = logging.getLogger(__name__)
 
 
 class PopulacaoService:
 
-    def __init__(self, client):
+    indicador = POPULACAO
+
+    def __init__(self, client, transformer):
 
         self.client = client
 
-    def fetch_populacao(self):
+        self.transformer = transformer
 
-        ano_fim = date.today().year
-        ano_inicio = ano_fim - 10
+    def fetch(self, ano_inicio, ano_fim=None):
 
-        logger.info("[PopulacaoService] Buscando dados IBGE")
+        logger.info(
+            "[PopulacaoService] Buscando %s periodo=%s-%s",
+            self.indicador.nome,
+            ano_inicio,
+            ano_fim or ano_inicio,
+        )
 
-        data = self.client.get_populacao(ano_inicio, ano_fim)
+        dados = self.client.get_indicator(
+            indicador=self.indicador,
+            ano_inicio=ano_inicio,
+            ano_fim=ano_fim,
+        )
 
-        return self._transform(data)
+        if not dados:
 
-    def _transform(self, data):
+            logger.warning("[PopulacaoService] Nenhum dado retornado")
 
-        series = data[0]["resultados"][0]["series"]
+            return []
 
-        result = []
+        if "resultados" not in dados[0]:
 
-        for item in series:
+            logger.warning(
+                "[PopulacaoService] Resposta inesperada: %s",
+                dados,
+            )
 
-            codigo = item["localidade"]["id"]
+            return []
 
-            for ano, pop in item["serie"].items():
-
-                # 🧠 proteção contra valores inválidos do IBGE
-                if pop in ("...", "..", "-", None, ""):
-                    continue
-
-                try:
-                    populacao = int(pop)
-                except (ValueError, TypeError):
-                    continue
-
-                result.append(
-                    {
-                        "municipio_id": str(codigo),
-                        "ano": int(ano),
-                        "populacao": populacao,
-                    }
-                )
-
-        return result
+        return self.transformer.transform(dados)

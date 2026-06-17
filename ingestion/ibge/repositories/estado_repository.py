@@ -1,6 +1,6 @@
 import logging
 
-from ibge.models import Estado
+from ibge.models.territorio import Estado
 
 logger = logging.getLogger(__name__)
 

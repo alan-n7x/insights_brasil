@@ -1,5 +1,5 @@
 from django.db.models import Max
-from ibge.models import PopulacaoMunicipio
+from ibge.models.territorio import PopulacaoMunicipio
 
 
 class PopulacaoRepository:

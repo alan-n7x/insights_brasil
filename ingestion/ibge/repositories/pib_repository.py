@@ -1,4 +1,4 @@
-from ibge.models import PIBMunicipio
+from ibge.models.territorio import PIBMunicipio
 
 
 class PIBRepository:

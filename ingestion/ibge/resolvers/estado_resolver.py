@@ -1,4 +1,4 @@
-from ibge.models import Estado
+from ibge.models.territorio import Estado
 
 
 class EstadoResolver:

@@ -1,3 +1,12 @@
+"""
+LEGACY
+
+Substituído por:
+
+
+python manage.py sync_indicator --indicator POPULACAO
+
+
 import logging
 import time
 
@@ -8,7 +17,7 @@ from ingestion.ibge.clients.ibge_client import IBGEClient
 from ingestion.ibge.clients.sidra_client import IBGESidraClient
 from ingestion.ibge.services.populacao_sync_service import PopulacaoService
 from ingestion.ibge.repositories.populacao_repository import PopulacaoRepository
-from ibge.models import Municipio
+from ibge.models.territorio import Municipio
 
 logger = logging.getLogger(__name__)
 
@@ -61,3 +70,4 @@ class Command(BaseCommand):
             ignored,
             fim - inicio,
         )
+"""

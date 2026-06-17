@@ -1,9 +1,18 @@
+"""
+LEGACY
+
+Substituído por:
+
+python manage.py sync_indicator --indicator PIB
+
+
+
 import logging
 import time
 
 from django.core.management.base import BaseCommand
 
-from ibge.models import PIBMunicipio
+# from ibge.models.territorio import PIBMunicipio
 
 from ingestion.ibge.clients.ibge_client import IBGEClient
 
@@ -91,3 +100,4 @@ class Command(BaseCommand):
             ignorados,
             fim - inicio,
         )
+"""

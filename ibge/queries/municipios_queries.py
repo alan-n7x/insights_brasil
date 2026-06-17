@@ -1,5 +1,5 @@
 import logging
-from ibge.models import Municipio
+from ibge.models.territorio import Municipio
 
 logger = logging.getLogger(__name__)
 

@@ -1,47 +1,57 @@
 from django.db.models import Sum, F, Max
-from ibge.models import PopulacaoMunicipio
+
+from ibge.models import IndicadorMunicipio
 
 
 class PopulacaoQuery:
-    """Classe para consultas relacionadas à população dos municípios."""
+    """Consultas relacionadas à população dos municípios."""
+
+    INDICADOR = "POPULACAO"
 
     def ranking_estados(self, ano=None):
-        """
-        Retorna ranking dos estados por população.
-        Se ano não for informado, usa o último disponível.
-        """
 
         if ano is None:
             ano = self.ultimo_ano_disponivel()
 
         if ano is None:
-            return []  # banco vazio ainda
+            return []
 
         return (
-            PopulacaoMunicipio.objects.filter(ano=ano)
+            IndicadorMunicipio.objects.filter(
+                indicador__codigo=self.INDICADOR,
+                ano=ano,
+            )
             .values(estado=F("municipio__estado__nome"))
-            .annotate(total=Sum("populacao"))
+            .annotate(total=Sum("valor"))
             .order_by("-total")
         )
 
     def ultimo_ano_disponivel(self):
-        """Retorna o último ano para o qual temos dados de população disponíveis."""
-        return PopulacaoMunicipio.objects.aggregate(ultimo_ano=Max("ano"))["ultimo_ano"]
-
-    def listar_anos(self):
-        """Retorna uma lista de anos para os quais temos dados de população disponíveis."""
 
         return (
-            PopulacaoMunicipio.objects.values_list("ano", flat=True)
+            IndicadorMunicipio.objects.filter(
+                indicador__codigo=self.INDICADOR
+            ).aggregate(ultimo_ano=Max("ano"))
+        )["ultimo_ano"]
+
+    def listar_anos(self):
+
+        return (
+            IndicadorMunicipio.objects.filter(indicador__codigo=self.INDICADOR)
+            .values_list(
+                "ano",
+                flat=True,
+            )
             .distinct()
             .order_by("ano")
         )
 
     def evolucao_populacao(self, estado_id=None):
-        """Evolução da população, soma da população de TODOS os municípios por ano"""
-        qs = PopulacaoMunicipio.objects.all()
+
+        qs = IndicadorMunicipio.objects.filter(indicador__codigo=self.INDICADOR)
 
         if estado_id:
+
             qs = qs.filter(municipio__estado_id=estado_id)
 
-        return qs.values("ano").annotate(total=Sum("populacao")).order_by("ano")
+        return qs.values("ano").annotate(total=Sum("valor")).order_by("ano")

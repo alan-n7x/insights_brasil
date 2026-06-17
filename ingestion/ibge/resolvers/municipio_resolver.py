@@ -1,4 +1,4 @@
-from ibge.models import Municipio
+from ibge.models.territorio import Municipio
 
 
 class MunicipioResolver:

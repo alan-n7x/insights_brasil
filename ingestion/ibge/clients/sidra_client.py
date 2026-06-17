@@ -1,10 +1,6 @@
 import logging
 
-from ingestion.ibge.definitions.sidra_indicadores import (
-    IndicadorSIDRA,
-    PIB,
-    POPULACAO,
-)
+from ingestion.ibge.definitions.sidra_indicadores import IndicadorSIDRA
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +11,7 @@ class IBGESidraClient:
 
         self.client = base_client
 
-    def _get_indicador(
+    def get_indicator(
         self,
         indicador: IndicadorSIDRA,
         ano_inicio: int,
@@ -23,48 +19,23 @@ class IBGESidraClient:
         localidades: str = "N6[all]",
     ):
 
-        if ano_fim is None:
-            ano_fim = ano_inicio
+        periodo = str(ano_inicio) if ano_fim is None else f"{ano_inicio}-{ano_fim}"
 
         logger.info(
-            "[IBGESidraClient] Buscando %s periodo=%s-%s",
+            "[IBGESidraClient] Buscando %s periodo=%s",
             indicador.nome,
-            ano_inicio,
-            ano_fim,
+            periodo,
         )
 
         path = (
             f"v3/agregados/{indicador.agregado}/"
-            f"periodos/{ano_inicio}-{ano_fim}/"
+            f"periodos/{periodo}/"
             f"variaveis/{indicador.variavel}"
         )
 
-        params = {
-            "localidades": localidades,
-        }
-
-        return self.client.get(path, params=params)
-
-    def get_populacao(
-        self,
-        ano_inicio: int,
-        ano_fim: int | None = None,
-    ):
-
-        return self._get_indicador(
-            indicador=POPULACAO,
-            ano_inicio=ano_inicio,
-            ano_fim=ano_fim,
-        )
-
-    def get_pib(
-        self,
-        ano_inicio: int,
-        ano_fim: int | None = None,
-    ):
-
-        return self._get_indicador(
-            indicador=PIB,
-            ano_inicio=ano_inicio,
-            ano_fim=ano_fim,
+        return self.client.get(
+            path,
+            params={
+                "localidades": localidades,
+            },
         )

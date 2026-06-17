@@ -12,12 +12,11 @@ class PIBTransformer:
         for ano, valor in serie["serie"].items():
 
             if valor in (None, "-", "..."):
-
                 continue
 
             registros.append(
                 {
-                    "municipio_ibge_id": municipio_ibge_id,
+                    "ibge_id": municipio_ibge_id,  # <- CORRIGIDO
                     "ano": int(ano),
                     "valor": Decimal(valor),
                 }
