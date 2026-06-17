@@ -93,11 +93,21 @@ Indicadores disponíveis no fluxo atual:
 ```text
 POPULACAO
 PIB
+PIB_PER_CAPITA
 ```
 
 Os comandos antigos de população e PIB ficam em `ingestion/management/commands/legacy/`
 e não fazem parte do fluxo recomendado. Use `sync_indicator` para novas coletas de
 indicadores.
+
+O indicador `PIB_PER_CAPITA` é derivado. Ele depende de `PIB` e `POPULACAO` já
+sincronizados para o mesmo município e ano:
+
+```bash
+python manage.py sync_indicator --indicator PIB --inicio 2022
+python manage.py sync_indicator --indicator POPULACAO --inicio 2022
+python manage.py sync_indicator --indicator PIB_PER_CAPITA --inicio 2022
+```
 
 ## Endpoints Principais
 

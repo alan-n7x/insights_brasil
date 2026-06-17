@@ -24,7 +24,7 @@ from ingestion.ibge.services.pib_service import (
     PIBService,
 )
 
-from ingestion.ibge.repositories.pib_repository import (
+from ingestion.ibge.repositories.legacy.pib_repository import (
     PIBRepository,
 )
 

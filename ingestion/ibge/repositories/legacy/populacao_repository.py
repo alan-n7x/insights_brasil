@@ -1,4 +1,3 @@
-from django.db.models import Max
 from ibge.models.territorio import PopulacaoMunicipio
 
 

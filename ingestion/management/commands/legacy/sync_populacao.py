@@ -16,7 +16,7 @@ from django.db import transaction
 from ingestion.ibge.clients.ibge_client import IBGEClient
 from ingestion.ibge.clients.sidra_client import IBGESidraClient
 from ingestion.ibge.services.populacao_sync_service import PopulacaoService
-from ingestion.ibge.repositories.populacao_repository import PopulacaoRepository
+from ingestion.ibge.repositories.legacy.populacao_repository import PopulacaoRepository
 from ibge.models.territorio import Municipio
 
 logger = logging.getLogger(__name__)

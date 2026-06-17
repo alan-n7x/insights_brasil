@@ -64,6 +64,9 @@ As principais entidades são:
 
 A tabela `IndicadorMunicipio` é a base analítica do projeto. Ela permite
 adicionar novos indicadores sem criar uma tabela específica para cada métrica.
+Indicadores derivados, como `PIB_PER_CAPITA`, também são gravados nessa mesma
+tabela para que os endpoints genéricos consigam consumi-los da mesma forma que
+os indicadores vindos diretamente do SIDRA.
 
 ### API
 
