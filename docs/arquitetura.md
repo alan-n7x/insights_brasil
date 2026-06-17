@@ -77,10 +77,20 @@ Endpoints principais:
 /api/ibge/populacao/anos/
 /api/ibge/populacao/ranking-estados/
 /api/ibge/populacao/evolucao/
+/api/ibge/indicadores/
+/api/ibge/indicadores/<indicador>/anos/
+/api/ibge/indicadores/<indicador>/ranking-estados/
+/api/ibge/indicadores/<indicador>/ranking-municipios/
+/api/ibge/indicadores/<indicador>/evolucao/
+/api/ibge/indicadores/<indicador>/municipios/<municipio_ibge_id>/evolucao/
 ```
 
 As views devem consultar dados já persistidos. Elas não devem chamar diretamente
 as APIs externas do IBGE.
+
+Os endpoints de `populacao` continuam existindo por compatibilidade, mas o fluxo
+mais escalável para o dashboard é consumir os endpoints genéricos de
+`indicadores`.
 
 ### Streamlit
 

@@ -132,6 +132,20 @@ GET /api/ibge/populacao/evolucao/
 GET /api/ibge/populacao/evolucao/?estado_id=1
 ```
 
+Endpoints genéricos de indicadores:
+
+```text
+GET /api/ibge/indicadores/
+GET /api/ibge/indicadores/POPULACAO/anos/
+GET /api/ibge/indicadores/POPULACAO/ranking-estados/?ano=2022
+GET /api/ibge/indicadores/POPULACAO/ranking-municipios/?ano=2022
+GET /api/ibge/indicadores/POPULACAO/ranking-municipios/?ano=2022&estado_id=1&limit=20
+GET /api/ibge/indicadores/POPULACAO/evolucao/
+GET /api/ibge/indicadores/POPULACAO/evolucao/?estado_id=1
+GET /api/ibge/indicadores/POPULACAO/municipios/3550308/evolucao/
+GET /api/ibge/indicadores/POPULACAO/municipios/3550308/evolucao/?ano_inicio=2010&ano_fim=2022
+```
+
 ## Rodando o Dashboard Streamlit
 
 Com o servidor Django rodando, execute:

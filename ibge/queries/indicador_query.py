@@ -1,9 +1,17 @@
-from django.db.models import Sum, F, Max
+from django.db.models import F, Max, Sum
 
-from ibge.models import IndicadorMunicipio
+from ibge.models import Indicador, IndicadorMunicipio
 
 
 class IndicadorQuery:
+
+    def listar_indicadores(self):
+
+        return Indicador.objects.all().values(
+            "id",
+            "codigo",
+            "nome",
+        ).order_by("codigo")
 
     def ultimo_ano_disponivel(self, indicador):
 
@@ -44,6 +52,46 @@ class IndicadorQuery:
             .annotate(total=Sum("valor"))
             .order_by("-total")
         )
+
+    def ranking_municipios(
+        self,
+        indicador,
+        ano=None,
+        estado_id=None,
+        limit=None,
+    ):
+
+        if ano is None:
+
+            ano = self.ultimo_ano_disponivel(indicador)
+
+        qs = IndicadorMunicipio.objects.filter(
+            indicador__codigo=indicador,
+            ano=ano,
+        )
+
+        if estado_id:
+
+            qs = qs.filter(
+                municipio__estado_id=estado_id,
+            )
+
+        qs = (
+            qs.values(
+                municipio_nome=F("municipio__nome"),
+                municipio_ibge_id=F("municipio__ibge_id"),
+                estado=F("municipio__estado__nome"),
+                sigla=F("municipio__estado__sigla"),
+            )
+            .annotate(total=Sum("valor"))
+            .order_by("-total")
+        )
+
+        if limit:
+
+            qs = qs[: int(limit)]
+
+        return qs
 
     def evolucao_municipio(
         self,

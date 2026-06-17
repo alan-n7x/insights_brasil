@@ -6,4 +6,5 @@ urlpatterns = [
     path("estados/", include("ibge.urls.estados")),
     path("municipios/", include("ibge.urls.municipios")),
     path("populacao/", include("ibge.urls.populacao")),
+    path("indicadores/", include("ibge.urls.indicadores")),
 ]
