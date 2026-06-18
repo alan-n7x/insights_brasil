@@ -1,35 +1,35 @@
-from ingestion.ibge.definitions.sidra_indicadores import PIB, POPULACAO
+from ibge.models import IndicadorMunicipio
 
-from ingestion.ibge.clients.ibge_client import IBGEClient
-from ingestion.ibge.clients.sidra_client import IBGESidraClient
+import logging
 
-from ingestion.ibge.services.pib_service import PIBService
-from ingestion.ibge.services.pib_per_capita_service import PIBPerCapitaService
-from ingestion.ibge.services.populacao_sync_service import PopulacaoService
-
-from ingestion.ibge.transformers.pib_transformer import PIBTransformer
-from ingestion.ibge.transformers.population_transformer import PopulationTransformer
+logger = logging.getLogger(__name__)
 
 
-class IndicatorResolver:
+class PIBPerCapitaService:
+    """
+    Retorna PIB per capita já calculado pelo IBGE (sem recomputar nada).
+    """
 
-    @staticmethod
-    def get(codigo):
+    PIB_PER_CAPITA_CODIGO = "PIB_PER_CAPITA"
 
-        codigo = codigo.upper()
+    def fetch(self, ano_inicio, ano_fim=None, estado_id=None):
+        ano_fim = ano_fim or ano_inicio
 
-        client = IBGESidraClient(IBGEClient())
+        qs = IndicadorMunicipio.objects.filter(
+            indicador__codigo=self.PIB_PER_CAPITA_CODIGO,
+            ano__gte=ano_inicio,
+            ano__lte=ano_fim,
+        ).select_related("municipio")
 
-        services = {
-            PIB.nome: PIBService(
-                client,
-                PIBTransformer(),
-            ),
-            POPULACAO.nome: PopulacaoService(
-                client,
-                PopulationTransformer(),
-            ),
-            PIBPerCapitaService.PIB_PER_CAPITA_CODIGO: PIBPerCapitaService(),
-        }
-
-        return services[codigo]
+        if estado_id:
+            qs = qs.filter(municipio__estado_id=estado_id)
+        
+        return [
+            {
+                "ibge_id": item.municipio.ibge_id,
+                "nome": item.municipio.nome,
+                "ano": item.ano,
+                "valor": float(item.valor),  # já pronto para gráfico
+            }
+            for item in qs.order_by("ano", "-valor")
+        ]

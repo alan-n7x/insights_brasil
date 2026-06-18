@@ -3,8 +3,16 @@ import requests
 import streamlit as st
 
 from api_client import InsightsAPIClient
-from charts.charts import horizontal_bar, line_chart, metric_card, to_number
+from charts.charts import (
+    format_number,
+    horizontal_bar,
+    line_chart,
+    metric_card,
+    to_number,
+)
 from config import API_BASE_URL, DEFAULT_INDICATOR
+
+RATIO_INDICATORS = {"PIB_PER_CAPITA"}
 
 
 def safe_load(label, callback):
@@ -13,6 +21,31 @@ def safe_load(label, callback):
     except requests.RequestException as exc:
         st.error(f"Erro ao carregar {label}: {exc}")
         st.stop()
+
+
+def normalize_indicator_df(df, value_col, indicador):
+    if df.empty or value_col not in df.columns:
+        return df
+
+    df = df.copy()
+
+    df[value_col] = to_number(df[value_col])
+
+    df["valor_formatado"] = df[value_col].apply(lambda x: format_number(x, indicador))
+
+    return df
+
+
+def current_year_value(df, year):
+    if df.empty or "ano" not in df.columns or "total" not in df.columns:
+        return 0
+
+    current = df[df["ano"] == year]
+
+    if current.empty:
+        return 0
+
+    return current.iloc[0]["total"]
 
 
 client = InsightsAPIClient()
@@ -27,21 +60,26 @@ st.title("Insights Brasil")
 st.caption("Dashboard de indicadores socioeconômicos por estado e município")
 
 with st.sidebar:
-    st.header("Filtros")
+    st.header("Insights Brasil")
     st.caption(f"API: {API_BASE_URL}")
 
     indicadores = safe_load("indicadores", client.listar_indicadores)
 
     if not indicadores:
-        st.warning("Nenhum indicador encontrado. Rode os comandos de ingestão primeiro.")
+        st.warning(
+            "Nenhum indicador encontrado. Rode os comandos de ingestão primeiro."
+        )
         st.stop()
 
     indicador_options = {item["codigo"]: item["nome"] for item in indicadores}
-    default_index = list(indicador_options).index(DEFAULT_INDICATOR) if DEFAULT_INDICATOR in indicador_options else 0
+    codigos = list(indicador_options)
+    default_index = (
+        codigos.index(DEFAULT_INDICATOR) if DEFAULT_INDICATOR in codigos else 0
+    )
 
     indicador = st.selectbox(
         "Indicador",
-        options=list(indicador_options),
+        options=codigos,
         index=default_index,
         format_func=lambda codigo: f"{codigo} - {indicador_options[codigo]}",
     )
@@ -60,7 +98,9 @@ with st.sidebar:
 
     estados = safe_load("estados", client.listar_estados)
     estado_options = {"Todos": None}
-    estado_options.update({f"{item['nome']} ({item['sigla']})": item["id"] for item in estados})
+    estado_options.update(
+        {f"{item['nome']} ({item['sigla']})": item["id"] for item in estados}
+    )
 
     estado_label = st.selectbox(
         "Estado",
@@ -70,7 +110,9 @@ with st.sidebar:
 
     municipios = safe_load("municípios", client.listar_municipios)
     municipios_filtrados = [
-        item for item in municipios if estado_id is None or item["estado_id"] == estado_id
+        item
+        for item in municipios
+        if estado_id is None or item["estado_id"] == estado_id
     ]
 
     municipio_options = {"Todos": None}
@@ -116,25 +158,50 @@ evolucao_municipio = (
     else []
 )
 
-df_estados = pd.DataFrame(ranking_estados)
-df_municipios = pd.DataFrame(ranking_municipios)
-df_evolucao = pd.DataFrame(evolucao_estado)
-df_evolucao_municipio = pd.DataFrame(evolucao_municipio)
+df_estados = normalize_indicator_df(
+    pd.DataFrame(ranking_estados),
+    "total",
+    indicador,
+)
 
-for df in (df_estados, df_municipios, df_evolucao, df_evolucao_municipio):
-    if not df.empty:
-        value_col = "total" if "total" in df.columns else "valor"
-        df[value_col] = to_number(df[value_col])
+df_municipios = normalize_indicator_df(
+    pd.DataFrame(ranking_municipios),
+    "total",
+    indicador,
+)
+
+df_evolucao = normalize_indicator_df(
+    pd.DataFrame(evolucao_estado),
+    "total",
+    indicador,
+)
+
+df_evolucao_municipio = normalize_indicator_df(
+    pd.DataFrame(evolucao_municipio),
+    "valor",
+    indicador,
+)
+if not df_estados.empty:
+    df_estados = df_estados.sort_values("total", ascending=False)
+
+if not df_municipios.empty:
+    df_municipios = df_municipios.sort_values("total", ascending=False)
 
 col1, col2, col3, col4 = st.columns(4)
 
-total_brasil = df_estados["total"].sum() if not df_estados.empty else 0
+if indicador in RATIO_INDICATORS:
+    valor_principal = current_year_value(df_evolucao, ano)
+    valor_principal_label = f"Valor Brasil {ano}"
+else:
+    valor_principal = df_estados["total"].sum() if not df_estados.empty else 0
+    valor_principal_label = f"Total {ano}"
+
 maior_estado = df_estados.iloc[0]["estado"] if not df_estados.empty else "-"
 maior_municipio = df_municipios.iloc[0]["municipio"] if not df_municipios.empty else "-"
 anos_disponiveis = len(anos)
 
 with col1:
-    metric_card(f"Total {ano}", total_brasil)
+    metric_card(valor_principal_label, valor_principal, indicador)
 
 with col2:
     st.metric("Líder estadual", maior_estado)
@@ -191,19 +258,61 @@ else:
                 "estado",
                 "sigla",
                 "total",
+                "valor_formatado",
             ]
         ],
         use_container_width=True,
         hide_index=True,
     )
 
-st.subheader("Dados por estado")
 
-if df_estados.empty:
-    st.info("Sem estados para os filtros selecionados.")
-else:
-    st.dataframe(
-        df_estados,
-        use_container_width=True,
-        hide_index=True,
-    )
+def normalize_municipio_evolucao(data):
+    df = pd.DataFrame(data)
+
+    if df.empty:
+        return df
+
+    df["ano"] = df["ano"].astype(int)
+    df["valor"] = df["valor"].astype(float)
+
+    return df
+
+
+evolucao_municipio = safe_load(
+    "evolução municipal",
+    lambda: client.evolucao_municipio(
+        indicador, municipio_ibge_id, ano_inicio=2010, ano_fim=2022
+    ),
+)
+
+if municipio_ibge_id:
+
+    municipio_nome = municipio_label.split(" (")[0]
+
+    municipio_ano_row = df_evolucao_municipio[df_evolucao_municipio["ano"] == ano]
+
+    valor = 0
+    if not municipio_ano_row.empty:
+        valor = municipio_ano_row.iloc[0]["valor"]
+
+    municipio_row = df_municipios[
+        df_municipios["municipio_ibge_id"] == municipio_ibge_id
+    ]
+
+    ranking = "-"
+    if not municipio_row.empty:
+        ranking = municipio_row.iloc[0].name + 1
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Município", municipio_nome)
+
+    with col2:
+        st.metric("Ranking", ranking)
+
+    with col3:
+        st.metric("Ano", ano)
+
+    with col4:
+        st.metric("Valor", format_number(valor, indicador))

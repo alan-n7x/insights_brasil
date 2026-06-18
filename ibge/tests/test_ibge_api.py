@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.test import TestCase
 from django.urls import reverse
 
@@ -168,3 +170,64 @@ class IBGEAPITest(TestCase):
                 "indicador": "INVALIDO",
             },
         )
+
+    def test_ranking_estados_pib_per_capita_recalcula_agregado(self):
+        municipio_2 = Municipio.objects.create(
+            ibge_id=3505708,
+            nome="Barueri",
+            estado=self.estado,
+            regiao="Sudeste",
+        )
+        pib = Indicador.objects.create(
+            codigo="PIB",
+            nome="PIB",
+        )
+        pib_per_capita = Indicador.objects.create(
+            codigo="PIB_PER_CAPITA",
+            nome="PIB per capita",
+        )
+
+        IndicadorMunicipio.objects.create(
+            municipio=self.municipio,
+            indicador=pib,
+            ano=2030,
+            valor=Decimal("100"),
+        )
+        IndicadorMunicipio.objects.create(
+            municipio=municipio_2,
+            indicador=pib,
+            ano=2030,
+            valor=Decimal("200"),
+        )
+        IndicadorMunicipio.objects.create(
+            municipio=self.municipio,
+            indicador=pib_per_capita,
+            ano=2030,
+            valor=Decimal("10000.00"),
+        )
+        IndicadorMunicipio.objects.create(
+            municipio=municipio_2,
+            indicador=pib_per_capita,
+            ano=2030,
+            valor=Decimal("2222.22"),
+        )
+        IndicadorMunicipio.objects.create(
+            municipio=self.municipio,
+            indicador=self.indicador,
+            ano=2030,
+            valor=Decimal("10"),
+        )
+        IndicadorMunicipio.objects.create(
+            municipio=municipio_2,
+            indicador=self.indicador,
+            ano=2030,
+            valor=Decimal("90"),
+        )
+
+        response = self.client.get(
+            "/api/ibge/indicadores/PIB_PER_CAPITA/ranking-estados/",
+            {"ano": 2030},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]["total"], "3.00")

@@ -52,7 +52,7 @@ class PIBPerCapitaServiceTest(TestCase):
                 {
                     "ibge_id": 3550308,
                     "ano": 2022,
-                    "valor": Decimal("200000.00"),
+                    "valor": Decimal("200.00"),
                 }
             ],
         )
