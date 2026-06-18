@@ -164,8 +164,40 @@ Com o servidor Django rodando, execute:
 streamlit run apps/streamlit/streamlit_app.py
 ```
 
-O dashboard consome a API Django local. A URL base pode ser alterada pela
-variável de ambiente `INSIGHTS_API_BASE_URL`.
+O dashboard consome os endpoints genéricos da API Django. A URL base pode ser
+alterada pela variável de ambiente `INSIGHTS_API_BASE_URL`.
+
+Variáveis úteis:
+
+```text
+INSIGHTS_API_BASE_URL=http://127.0.0.1:8000
+STREAMLIT_DEFAULT_INDICATOR=POPULACAO
+STREAMLIT_REQUEST_TIMEOUT=10
+```
+
+Estrutura do app Streamlit:
+
+```text
+apps/streamlit/
+  streamlit_app.py      Tela principal do dashboard
+  api_client.py         Cliente HTTP da API Django
+  config.py             Configurações por variável de ambiente
+  charts/
+    charts.py           Componentes de gráficos e métricas
+```
+
+Rotas usadas pelo dashboard:
+
+```text
+GET /api/ibge/estados/
+GET /api/ibge/municipios/
+GET /api/ibge/indicadores/
+GET /api/ibge/indicadores/<indicador>/anos/
+GET /api/ibge/indicadores/<indicador>/ranking-estados/
+GET /api/ibge/indicadores/<indicador>/ranking-municipios/
+GET /api/ibge/indicadores/<indicador>/evolucao/
+GET /api/ibge/indicadores/<indicador>/municipios/<municipio_ibge_id>/evolucao/
+```
 
 ## Testes
 
