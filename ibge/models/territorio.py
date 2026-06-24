@@ -1,6 +1,50 @@
 from django.db import models
 
 
+# =========================
+# DIMENSÃO: TEMPO
+# =========================
+class Tempo(models.Model):
+    """
+    Dimensão temporal para suportar diferentes granularidades.
+    Permite dados anuais, mensais, trimestrais, semestrais.
+    """
+
+    ano = models.IntegerField(db_index=True)
+
+    mes = models.IntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="1-12 para dados mensais"
+    )
+
+    trimestre = models.IntegerField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="1-4 para dados trimestrais"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["ano", "mes", "trimestre"],
+                name="uniq_tempo"
+            )
+        ]
+        ordering = ["-ano", "-mes", "-trimestre"]
+        verbose_name = "Tempo"
+        verbose_name_plural = "Tempos"
+
+    def __str__(self):
+        if self.mes:
+            return f"{self.ano}-{self.mes:02d}"
+        elif self.trimestre:
+            return f"{self.ano}-T{self.trimestre}"
+        return str(self.ano)
+
+
 # Create your models here.
 class Estado(models.Model):
 

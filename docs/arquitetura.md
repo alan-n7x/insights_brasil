@@ -3,44 +3,32 @@
 ## Objetivo
 
 O Insights Brasil coleta dados públicos do IBGE, persiste esses dados em banco
-local e os disponibiliza por meio de APIs e dashboards interativos.
+local e disponibiliza estruturas para análise de indicadores territoriais.
 
 ## Fluxo Geral
 
 ```text
 IBGE/SIDRA
--> commands de coleta
--> banco de dados
--> queries e services
--> views JSON
--> Streamlit
+-> commands de coleta (ibge/management/commands/)
+-> banco de dados (SQLite)
+-> queries e services (ibge/repository/, ibge/service/, ibge/query_engine/)
+-> API endpoints (ibge/views/ ou ibge/query_engine/api_views.py)
 ```
 
 ## Camadas
 
 ### Domínio IBGE
 
-O app `ibge` concentra os modelos, consultas, views e URLs relacionados aos
-dados territoriais e indicadores.
+O app `ibge` concentra todo o domínio territorial, incluindo ingestão de dados.
 
 Responsabilidades:
 
-- Modelar estados, municípios e indicadores.
-- Expor endpoints JSON.
-- Agregar dados para rankings e séries históricas.
-- Manter as views sem dependência direta das APIs externas.
-
-### Ingestão
-
-O app `ingestion` concentra a coleta e normalização dos dados.
-
-Responsabilidades:
-
-- Consultar APIs externas do IBGE/SIDRA.
-- Transformar payloads externos para o formato interno.
-- Resolver dependências, como estado ou município existente.
-- Persistir registros com operações idempotentes.
-- Registrar logs de execução.
+- Modelar estados, municípios e indicadores (Star Schema).
+- Consultar APIs externas do IBGE/SIDRA (clients/).
+- Transformar payloads externos para o formato interno (transformers/).
+- Persistir registros com operações idempotentes (repositories/).
+- Orquestrar coleta de dados (services/).
+- Resolver dependências via Factory pattern (resolvers/).
 
 Exemplos de comandos:
 
@@ -49,9 +37,9 @@ python manage.py sync_estados
 python manage.py sync_indicator --indicator POPULACAO --inicio 2022
 ```
 
-Os comandos antigos de indicadores, como `sync_populacao` e `sync_pib`, ficam na
-pasta `ingestion/management/commands/legacy/`. O fluxo recomendado para
-indicadores é o command genérico `sync_indicator`.
+Os comandos antigos de indicadores, como `sync_populacao` e `sync_pib`, foram
+removidos. O fluxo recomendado para indicadores é o command genérico
+`sync_indicator`.
 
 ### Banco de Dados
 
@@ -60,77 +48,79 @@ As principais entidades são:
 - `Estado`: unidade federativa.
 - `Municipio`: município vinculado a um estado.
 - `Indicador`: catálogo de indicadores, como `POPULACAO` ou `PIB`.
-- `IndicadorMunicipio`: tabela fato com valor de um indicador por município e ano.
+- `Tempo`: dimensão temporal com granularidades (anual, mensal, trimestral).
+- `FatoIndicador`: tabela fato com valor de um indicador por município e tempo.
 
-A tabela `IndicadorMunicipio` é a base analítica do projeto. Ela permite
+A tabela `FatoIndicador` é a base analítica do projeto. Ela permite
 adicionar novos indicadores sem criar uma tabela específica para cada métrica.
 Indicadores derivados, como `PIB_PER_CAPITA`, também são gravados nessa mesma
-tabela para que os endpoints genéricos consigam consumi-los da mesma forma que
-os indicadores vindos diretamente do SIDRA.
+tabela.
 
-### API
+### Consulta de Dados
 
-As views expõem dados em JSON.
+Os dados podem ser consultados via:
 
-Endpoints principais:
+- **Django Admin**: Interface web para visualizar e editar dados
+- **Python Shell**: Usando models e repositories do Django
+- **Jupyter Notebooks**: Localizados em `ibge/notebooks/`
 
-```text
-/api/ibge/estados/
-/api/ibge/municipios/
-/api/ibge/populacao/anos/
-/api/ibge/populacao/ranking-estados/
-/api/ibge/populacao/evolucao/
-/api/ibge/indicadores/
-/api/ibge/indicadores/<indicador>/anos/
-/api/ibge/indicadores/<indicador>/ranking-estados/
-/api/ibge/indicadores/<indicador>/ranking-municipios/
-/api/ibge/indicadores/<indicador>/evolucao/
-/api/ibge/indicadores/<indicador>/municipios/<municipio_ibge_id>/evolucao/
-```
+### Consulta Analítica (Query Engine)
 
-As views devem consultar dados já persistidos. Elas não devem chamar diretamente
-as APIs externas do IBGE.
+Recentemente, adicionamos uma camada de consulta analítica com busca semântica
+e caching, localizada em `ibge/query_engine/`. Essa camada permite:
 
-Os endpoints de `populacao` continuam existindo por compatibilidade, mas o fluxo
-mais escalável para o dashboard é consumir os endpoints genéricos de
-`indicadores`.
+- Consultas em linguagem natural sobre indicadores territoriais.
+- Uso de embeddings semânticos para entender intenções do usuário.
+- Cache de resultados para melhorar performance em consultas repetidas.
+- Integração com o modelo star schema existente.
 
-### Streamlit
+A arquitetura da engine de consulta inclui:
 
-O Streamlit é responsável pela visualização.
+- **Modelo Semântico**: Mapeia conceitos de negócio (como "PIB per capita")
+  para entidades do modelo (Indicador, Município, Tempo).
+- **Cache de Consultas**: Armazena resultados de consultas frequentes.
+- **API de Consulta**: Endpoints para consumir as consultas analíticas.
 
-```text
-Usuário
--> Streamlit
--> API Django
--> JSON
--> DataFrame
--> gráfico
-```
+### Serviços de API
 
-O dashboard não deve acessar diretamente:
+Além da engine de consulta, oferecemos endpoints genéricos para indicadores
+via REST em `ibge/views/` e `ibge/query_engine/api_views.py`. Esses endpoints
+permitem:
 
-- Banco de dados.
-- APIs externas do IBGE.
-- Models do Django.
+- Listar indicadores disponíveis.
+- Obter dados de indicadores por município e período.
+- Executar consultas pré-definidas de agregação.
 
-## Estrutura de Pastas
+### Estrutura de Pastas
 
 ```text
 insights_brasil/
   core/                 Configuração Django
-  ibge/                 Domínio, models, queries, views e urls
-  ingestion/            Coleta, transformação e persistência
-  apps/streamlit/       Dashboard
+  ibge/                 Domínio IBGE completo (ingestão incorporada)
+    models/             Tempo, Estado, Municipio, Indicador, FatoIndicador
+    clients/            Clientes HTTP (IBGEClient, SidraClient)
+    repositories/       Repositórios de dados (persistência)
+    services/           Services de negócio e sync
+    transformers/       Transformadores de dados externos
+    resolvers/          Factory pattern para services
+    definitions/        Catálogo de indicadores SIDRA
+    query_engine/       Arquitetura de consulta com busca semântica e caching
+    views/              Endpoints de API REST para indicadores
+    management/commands/ Commands Django (sync_estados, sync_indicator, etc.)
+    tests/              Testes do app ibge
+    notebooks/          Jupyter notebooks para exploração
   docs/                 Documentação técnica
-  sql/                  Consultas auxiliares
+  sql/                  Consultas SQL auxiliares
 ```
 
 ## Próximos Passos Técnicos
 
-- Ampliar testes unitários para transformers, services e queries.
-- Criar endpoints genéricos para indicadores além de população.
-- Adicionar cache para consultas frequentes.
-- Pré-calcular agregações muito usadas.
-- Melhorar filtros do dashboard Streamlit.
+- Ampliar testes unitários para transformers, services e repositories.
+- Ampliar o catálogo de indicadores disponíveis em definitions/.
+- Melhorar a interface da API REST com documentação interativa (Swagger/OpenAPI).
+- Expandir capacidades da engine de consulta (mais tipos de consultas, melhorias no NLP).
+- Adicionar cache para consultas frequentes na engine de consulta.
+- Pré-calcular agregações muito usadas para melhorar performance de dashboards.
+- Implementar dashboard de visualização (Streamlit ou similar).
 - Preparar configuração de produção com variáveis de ambiente.
+- Migrar de SQLite para PostgreSQL para produção.

@@ -1,8 +1,0 @@
-import os
-
-
-API_BASE_URL = os.getenv("INSIGHTS_API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
-
-REQUEST_TIMEOUT = int(os.getenv("STREAMLIT_REQUEST_TIMEOUT", "10"))
-
-DEFAULT_INDICATOR = os.getenv("STREAMLIT_DEFAULT_INDICATOR", "POPULACAO")

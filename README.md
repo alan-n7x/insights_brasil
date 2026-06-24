@@ -1,8 +1,7 @@
 # Insights Brasil
 
 Projeto Django para coletar dados públicos do IBGE, armazenar em banco local e
-disponibilizar APIs que podem ser consumidas por dashboards, como o app em
-Streamlit incluído neste repositório.
+analisar indicadores territoriais brasileiros.
 
 ## Visão Geral
 
@@ -10,15 +9,17 @@ O fluxo principal do projeto é:
 
 ```text
 APIs do IBGE/SIDRA
--> comandos de ingestão Django
--> banco de dados
--> consultas e views JSON
--> dashboard Streamlit
+-> comandos de ingestão Django (ibge/management/commands/)
+-> banco de dados (SQLite)
+-> consultas e services (ibge/repository/, ibge/service/, ibge/query_engine/)
+-> API endpoints para consumo (ibge/views/ ou ibge/query_engine/api_views.py)
+-> painéis analíticos (Streamlit ou similar)
 ```
 
 Hoje o projeto está focado em dados territoriais e indicadores municipais,
 especialmente população e PIB, com uma modelagem preparada para receber novos
-indicadores.
+indicadores. Recentemente, adicionamos uma camada de consulta com busca semântica
+e caching para consultas analíticas flexíveis.
 
 ## Requisitos
 
@@ -56,17 +57,26 @@ Execute as migrações:
 python manage.py migrate
 ```
 
-## Rodando a API Django
+## Rodando o Projeto
 
 ```bash
 python manage.py runserver
 ```
 
-A API ficará disponível em:
+O painel de admin estará disponível em:
 
 ```text
-http://127.0.0.1:8000/api/ibge/
+http://127.0.0.1:8000/admin/
 ```
+
+Endpoints de API genéricos para indicadores estão disponíveis em:
+
+```text
+http://127.0.0.1:8000/api/indicadores/
+```
+
+Documentação interativa (Swagger) disponível em DEBUG=True:
+http://127.0.0.1:8000/swagger/
 
 ## Comandos de Ingestão
 
@@ -96,10 +106,6 @@ PIB
 PIB_PER_CAPITA
 ```
 
-Os comandos antigos de população e PIB ficam em `ingestion/management/commands/legacy/`
-e não fazem parte do fluxo recomendado. Use `sync_indicator` para novas coletas de
-indicadores.
-
 O indicador `PIB_PER_CAPITA` é derivado. Ele depende de `PIB` e `POPULACAO` já
 sincronizados para o mesmo município e ano:
 
@@ -109,94 +115,67 @@ python manage.py sync_indicator --indicator POPULACAO --inicio 2022
 python manage.py sync_indicator --indicator PIB_PER_CAPITA --inicio 2022
 ```
 
-## Endpoints Principais
+**Nota:** Os comandos antigos de população e PIB foram removidos e não fazem
+parte do fluxo recomendado. Use `sync_indicator` para novas coletas de
+indicadores.
 
-Listar estados:
+## Consulta de Dados
 
-```text
-GET /api/ibge/estados/
+Os dados podem ser consultados via:
+
+- **Django Admin**: Interface web para visualizar e editar dados
+- **Python Shell**: Usando models e repositories do Django
+- **Jupyter Notebooks**: Localizados em `ibge/notebooks/`
+- **API REST**: Endpoints genéricos para indicadores (ver acima)
+
+Exemplo de consulta via Python shell:
+
+```python
+from ibge.models import Estado, Municipio, Indicador, FatoIndicador
+
+# Listar estados
+Estado.objects.all()
+
+# Consultar população de um município
+from ibge.models import Tempo
+from ibge.repositories.indicador_municipio_repository import FatoIndicadorRepository
+
+# Dados podem ser consultados via ORM Django ou repositories
 ```
 
-Listar municípios:
+## Consulta Analítica (Query Engine)
 
-```text
-GET /api/ibge/municipios/
+Para consultas analíticas avançadas com busca semântica e caching, use o
+módulo de consulta:
+
+```python
+from ibge.query_engine.query_engine import IndicatorQueryEngine
+
+engine = IndicatorQueryEngine()
+results = engine.execute("Qual o PIB per capita de São Paulo em 2022?")
 ```
 
-Listar anos disponíveis para população:
+Veja mais em `ibge/query_engine/README.md`.
+
+## Estrutura do Projeto
 
 ```text
-GET /api/ibge/populacao/anos/
-```
-
-Ranking populacional por estado:
-
-```text
-GET /api/ibge/populacao/ranking-estados/?ano=2022
-```
-
-Evolução populacional:
-
-```text
-GET /api/ibge/populacao/evolucao/
-GET /api/ibge/populacao/evolucao/?estado_id=1
-```
-
-Endpoints genéricos de indicadores:
-
-```text
-GET /api/ibge/indicadores/
-GET /api/ibge/indicadores/POPULACAO/anos/
-GET /api/ibge/indicadores/POPULACAO/ranking-estados/?ano=2022
-GET /api/ibge/indicadores/POPULACAO/ranking-municipios/?ano=2022
-GET /api/ibge/indicadores/POPULACAO/ranking-municipios/?ano=2022&estado_id=1&limit=20
-GET /api/ibge/indicadores/POPULACAO/evolucao/
-GET /api/ibge/indicadores/POPULACAO/evolucao/?estado_id=1
-GET /api/ibge/indicadores/POPULACAO/municipios/3550308/evolucao/
-GET /api/ibge/indicadores/POPULACAO/municipios/3550308/evolucao/?ano_inicio=2010&ano_fim=2022
-```
-
-## Rodando o Dashboard Streamlit
-
-Com o servidor Django rodando, execute:
-
-```bash
-streamlit run apps/streamlit/streamlit_app.py
-```
-
-O dashboard consome os endpoints genéricos da API Django. A URL base pode ser
-alterada pela variável de ambiente `INSIGHTS_API_BASE_URL`.
-
-Variáveis úteis:
-
-```text
-INSIGHTS_API_BASE_URL=http://127.0.0.1:8000
-STREAMLIT_DEFAULT_INDICATOR=POPULACAO
-STREAMLIT_REQUEST_TIMEOUT=10
-```
-
-Estrutura do app Streamlit:
-
-```text
-apps/streamlit/
-  streamlit_app.py      Tela principal do dashboard
-  api_client.py         Cliente HTTP da API Django
-  config.py             Configurações por variável de ambiente
-  charts/
-    charts.py           Componentes de gráficos e métricas
-```
-
-Rotas usadas pelo dashboard:
-
-```text
-GET /api/ibge/estados/
-GET /api/ibge/municipios/
-GET /api/ibge/indicadores/
-GET /api/ibge/indicadores/<indicador>/anos/
-GET /api/ibge/indicadores/<indicador>/ranking-estados/
-GET /api/ibge/indicadores/<indicador>/ranking-municipios/
-GET /api/ibge/indicadores/<indicador>/evolucao/
-GET /api/ibge/indicadores/<indicador>/municipios/<municipio_ibge_id>/evolucao/
+core/                  Configuração Django
+ibge/                  Domínio IBGE completo (ingestão incorporada)
+  - models/            Tempo, Estado, Municipio, Indicador, FatoIndicador
+  - clients/           Clientes HTTP (IBGEClient, SidraClient)
+  - repositories/      Repositórios de dados (persistência)
+  - services/          Services de negócio e sync
+  - transformers/      Transformadores de dados externos
+  - resolvers/         Factory pattern para services
+  - definitions/       Catálogo de indicadores SIDRA
+  - query_engine/      Arquitetura de consulta com busca semântica e caching
+  - views/             Endpoints de API REST para indicadores
+  - management/commands/  Commands Django (sync_estados, sync_indicator, etc.)
+  - tests/             Testes do app ibge
+  - notebooks/         Jupyter notebooks para exploração
+docs/                  Documentação técnica
+sql/                   Consultas SQL auxiliares
 ```
 
 ## Testes
@@ -208,13 +187,11 @@ python manage.py test
 Os testes devem ser determinísticos e não depender da API externa do IBGE.
 Clientes HTTP devem ser testados com mocks.
 
-## Estrutura
+## Modelagem de Dados
 
-```text
-core/                  Configuração Django
-ibge/                  Modelos, queries, views e URLs do domínio IBGE
-ingestion/             Clientes, transformers, services e commands de coleta
-apps/streamlit/        Dashboard interativo
-docs/                  Documentação técnica
-sql/                   Consultas auxiliares
-```
+O projeto usa um **Star Schema** para análise de indicadores territoriais:
+
+- **Dimensões**: `Estado`, `Municipio`, `Indicador`, `Tempo`
+- **Tabela Fato**: `FatoIndicador` (valores por município, indicador e tempo)
+
+A dimensão `Tempo` permite granularidades diferentes (anual, mensal, trimestral).
