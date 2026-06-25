@@ -1,0 +1,332 @@
+/* =====================================================
+   INSIGHT BRASIL - GLOBAL STYLE
+   ===================================================== */
+
+
+/* ===============================
+   SIDEBAR
+   =============================== */
+
+[data-testid="stSidebar"] {
+    background: #242631 !important;
+}
+
+
+/* Área superior da sidebar */
+
+[data-testid="stSidebarHeader"] {
+    height: 150px !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding-top: 20px !important;
+}
+
+
+/* Container do logo */
+
+[data-testid="stLogoLink"] {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+
+/* Imagem logo */
+
+[data-testid="stSidebarLogo"] {
+    width: 240px !important;
+    height: auto !important;
+    object-fit: contain !important;
+}
+
+
+
+/* ===============================
+   MENU LATERAL
+   =============================== */
+
+
+[data-testid="stSidebarNav"] {
+    padding-top: 25px !important;
+}
+
+
+/* Links */
+
+[data-testid="stSidebarNavLink"] {
+
+    border-radius: 10px !important;
+
+    margin-bottom: 8px !important;
+
+    padding: 12px 16px !important;
+
+    transition: all .2s ease;
+
+}
+
+
+/* Hover */
+
+[data-testid="stSidebarNavLink"]:hover {
+
+    background-color: #353947 !important;
+
+}
+
+
+/* Página selecionada */
+
+[data-testid="stSidebarNavLink"][aria-current="page"] {
+
+    background-color: #505463 !important;
+
+    font-weight: 700 !important;
+
+}
+
+
+
+/* ===============================
+   ÁREA PRINCIPAL
+   =============================== */
+
+
+.main {
+
+    padding-top: 40px !important;
+
+}
+
+
+
+/* Título principal */
+
+h1 {
+
+    font-size: 42px !important;
+
+    font-weight: 800 !important;
+
+    letter-spacing: -1px;
+
+}
+
+
+
+/* Subtítulos */
+
+h2 {
+
+    font-weight: 700 !important;
+
+}
+
+
+h3 {
+
+    font-weight: 700 !important;
+
+}
+
+
+
+/* Texto secundário */
+
+.stCaption {
+
+    color: #9ca3af !important;
+
+}
+
+
+
+/* ===============================
+   CARDS DE INDICADORES
+   =============================== */
+
+
+.dashboard-card {
+
+    background: #1f222b;
+
+    border-radius: 16px;
+
+    padding: 22px;
+
+    border: 1px solid #343844;
+
+    box-shadow: 0 5px 20px rgba(0, 0, 0, .15);
+
+}
+
+
+.dashboard-card h3 {
+
+    font-size: 15px;
+
+    color: #9ca3af;
+
+}
+
+
+.dashboard-card h1 {
+
+    font-size: 36px !important;
+
+    margin-top: 8px;
+
+}
+
+
+
+/* ===============================
+   MÉTRICAS STREAMLIT
+   =============================== */
+
+
+[data-testid="stMetric"] {
+
+    background: #1f222b;
+
+    padding: 20px;
+
+    border-radius: 16px;
+
+    border: 1px solid #343844;
+
+}
+
+
+
+[data-testid="stMetricLabel"] {
+
+    color: #9ca3af !important;
+
+}
+
+
+[data-testid="stMetricValue"] {
+
+    font-size: 32px !important;
+
+    font-weight: 800 !important;
+
+}
+
+
+
+/* ===============================
+   BOTÕES
+   =============================== */
+
+
+.stButton button {
+
+
+    border-radius: 10px !important;
+
+    padding: 10px 20px !important;
+
+    font-weight: 600 !important;
+
+}
+
+
+
+/* ===============================
+   TABELAS
+   =============================== */
+
+
+[data-testid="stDataFrame"] {
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+}
+
+
+
+/* ===============================
+   SELECTBOX / INPUTS
+   =============================== */
+
+
+.stSelectbox>div>div {
+
+    border-radius: 10px !important;
+
+}
+
+
+.stTextInput input {
+
+    border-radius: 10px !important;
+
+}
+
+
+
+/* ===============================
+   DIVISORES
+   =============================== */
+
+
+hr {
+
+    border-color: #343844 !important;
+
+}
+
+
+
+/* ===============================
+   REMOVE ELEMENTOS STREAMLIT
+   =============================== */
+
+
+/* Esconde menu deploy */
+
+#MainMenu {
+
+    visibility: hidden;
+
+}
+
+
+/* Rodapé */
+
+footer {
+
+    visibility: hidden;
+
+}
+
+
+
+/* ===============================
+   RESPONSIVIDADE
+   =============================== */
+
+
+@media (max-width: 768px) {
+
+
+    h1 {
+
+        font-size: 32px !important;
+
+    }
+
+
+    [data-testid="stSidebarLogo"] {
+
+        width: 190px !important;
+
+    }
+
+}
