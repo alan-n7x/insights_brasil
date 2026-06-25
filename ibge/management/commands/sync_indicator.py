@@ -60,8 +60,12 @@ class Command(BaseCommand):
 
         sync = IndicadorSyncService()
 
+        # Get the indicator definition from the resolver
+        indicador_def = IndicatorResolver.get_indicator_definition(indicator)
+
         sync.sync(
             codigo_indicador=indicator,
+            indicador_def=indicador_def,
             registros=registros,
         )
 

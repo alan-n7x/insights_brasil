@@ -41,3 +41,14 @@ PIB_PER_CAPITA = IndicadorSIDRA(
     periodicidade="Anual",
     fonte="IBGE SIDRA"
 )
+
+# Test indicator for development
+TEST_INDICADOR = IndicadorSIDRA(
+    agregado=1234,
+    variavel=5678,
+    nome="TEST_INDICADOR",
+    descricao="Indicador de teste",
+    unidade="Unidades",
+    periodicidade="Mensal",
+    fonte="Fonte de teste"
+)

@@ -98,16 +98,11 @@ Com intervalo de anos:
 python manage.py sync_indicator --indicator POPULACAO --inicio 2010 --fim 2022
 ```
 
-Indicadores disponíveis no fluxo atual:
+Indicadores disponíveis:
 
-```text
-POPULACAO
-PIB
-PIB_PER_CAPITA
-```
+Todos os indicadores definidos em `ibge/data_ingestion/definitions/sidra_indicadores.py` são suportados pelo comando `sync_indicator`. Basta indicar o código do indicador (ex: `POPULACAO`, `PIB`, `PIB_PER_CAPITA` ou qualquer outro que você adicionar ao arquivo).
 
-O indicador `PIB_PER_CAPITA` é derivado. Ele depende de `PIB` e `POPULACAO` já
-sincronizados para o mesmo município e ano:
+O indicador `PIB_PER_CAPITA` é derivado. Ele depende de `PIB` e `POPULACAO` já sincronizados para o mesmo município e ano:
 
 ```bash
 python manage.py sync_indicator --indicator PIB --inicio 2022
@@ -115,9 +110,7 @@ python manage.py sync_indicator --indicator POPULACAO --inicio 2022
 python manage.py sync_indicator --indicator PIB_PER_CAPITA --inicio 2022
 ```
 
-**Nota:** Os comandos antigos de população e PIB foram removidos e não fazem
-parte do fluxo recomendado. Use `sync_indicator` para novas coletas de
-indicadores.
+Nota: Os comandos antigos de população e PIB foram removidos e não fazem parte do fluxo recomendado. Use `sync_indicator` para novas coletas de indicadores.
 
 ## Consulta de Dados
 

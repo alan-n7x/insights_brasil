@@ -21,14 +21,22 @@ class IndicadorSyncService:
 
         self.resolver = MunicipioResolver()
 
-    def get_indicador(self, codigo: str):
+    def get_indicador(self, codigo: str, indicador_def=None):
 
-        indicador, _ = Indicador.objects.get_or_create(
+        indicador, created = Indicador.objects.get_or_create(
             codigo=codigo,
             defaults={
                 "nome": codigo,
             },
         )
+        if indicador_def is not None:
+            # Update fields from definition to keep in sync with sidra_indicadores.py
+            indicador.nome = indicador_def.nome
+            indicador.descricao = indicador_def.descricao
+            indicador.unidade = indicador_def.unidade
+            indicador.periodicidade = indicador_def.periodicidade
+            indicador.fonte = indicador_def.fonte
+            indicador.save()
 
         return indicador
 
@@ -39,16 +47,17 @@ class IndicadorSyncService:
     def sync(
         self,
         codigo_indicador: str,
-        registros: list[dict],
+        indicador_def=None,
+        registros: list[dict] = None,
     ):
 
         logger.info(
             "[IndicadorSync] Iniciando sync %s registros=%s",
             codigo_indicador,
-            len(registros),
+            len(registros) if registros else 0,
         )
 
-        indicador = self.get_indicador(codigo_indicador)
+        indicador = self.get_indicador(codigo_indicador, indicador_def)
 
         total = 0
 
