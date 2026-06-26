@@ -32,6 +32,40 @@ class TempoSerializer(serializers.ModelSerializer):
 
 
 class FatoIndicadorSerializer(serializers.ModelSerializer):
+
+    indicador_id = serializers.IntegerField(source="indicador.id", read_only=True)
+    indicador = serializers.CharField(source="indicador.nome", read_only=True)
+
+    municipio_id = serializers.IntegerField(source="municipio.id", read_only=True)
+    municipio = serializers.CharField(source="municipio.nome", read_only=True)
+
+    ano = serializers.IntegerField(source="tempo.ano", read_only=True)
+
     class Meta:
         model = FatoIndicador
-        fields = ["id", "valor", "indicador", "municipio", "tempo"]
+        fields = [
+            "id",
+            "valor",
+            "indicador_id",
+            "indicador",
+            "municipio_id",
+            "municipio",
+            "ano",
+        ]
+
+
+class FatoIndicadorDetailSerializer(serializers.ModelSerializer):
+
+    indicador = IndicadorSerializer(read_only=True)
+    municipio = MunicipioSerializer(read_only=True)
+    tempo = TempoSerializer(read_only=True)
+
+    class Meta:
+        model = FatoIndicador
+        fields = [
+            "id",
+            "valor",
+            "indicador",
+            "municipio",
+            "tempo",
+        ]

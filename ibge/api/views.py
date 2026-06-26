@@ -8,6 +8,7 @@ from .serializers import (
     MunicipioSerializer,
     TempoSerializer,
     FatoIndicadorSerializer,
+    FatoIndicadorDetailSerializer,
 )
 
 
@@ -34,5 +35,17 @@ class TempoViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class FatoIndicadorViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = FatoIndicador.objects.all()
-    serializer_class = FatoIndicadorSerializer
+
+    queryset = FatoIndicador.objects.select_related(
+        "indicador",
+        "municipio",
+        "tempo",
+    )
+
+    def get_serializer_class(self):
+        # Se for GET /fatos/
+        if self.action == "list":
+            return FatoIndicadorSerializer
+
+        # Se for GET /fatos/10/
+        return FatoIndicadorDetailSerializer
