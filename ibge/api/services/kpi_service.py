@@ -32,6 +32,13 @@ class KPIService:
             "type": "aggregated",
             "aggregation": "sum"
         },
+        # PIB agregado por Estado, ordenado do maior para o menor (ranking).
+        "PIB": {
+            "type": "aggregated",
+            "aggregation": "sum",
+            "group_by": "municipio__estado__nome",
+            "order_by": "-total"
+        },
         # Exemplo de indicador que poderia ser média (caso exista no futuro):
         # "IDH_MEDIO": {
         #     "type": "aggregated",
@@ -68,6 +75,26 @@ class KPIService:
         """
         aggregated = qs.aggregate(total=agg_func('valor'))['total']
         return float(aggregated) if aggregated is not None else None
+
+    @classmethod
+    def _apply_grouped_aggregation(cls, qs, agg_func, group_by, order_by=None):
+        """
+        Aplica agregação agrupada ao queryset.
+        Retorna uma lista de dicionários contendo o grupo e o total agregado.
+        Se order_by for fornecido, aplica a ordenação.
+        """
+        # Agrupa pelo campo indicado e calcula a agregação
+        queryset = qs.values(group_by).annotate(total=agg_func('valor'))
+        if order_by:
+            queryset = queryset.order_by(order_by)
+        # Converte para lista de dict com valores float
+        result = []
+        for item in queryset:
+            result.append({
+                group_by.split('__')[-1]: item[group_by],
+                'total': float(item['total']) if item['total'] is not None else None
+            })
+        return result
 
     @classmethod
     def get_indicators(cls, codigos: list[str], ano: int | None = None) -> dict:
@@ -111,9 +138,13 @@ class KPIService:
             aggregation_name = rule.get("aggregation")
 
             if kpi_type == "aggregated":
-                # Determina a função de agregação; padrão é sum.
                 agg_func_cls = cls._AGGREGATION_FUNCS.get(aggregation_name or "sum", Sum)
-                valor = cls._apply_aggregation(qs, agg_func_cls)
+                group_by = rule.get("group_by")
+                order_by = rule.get("order_by")
+                if group_by:
+                    valor = cls._apply_grouped_aggregation(qs, agg_func_cls, group_by, order_by)
+                else:
+                    valor = cls._apply_aggregation(qs, agg_func_cls)
             elif kpi_type == "raw":
                 # RAW: retorna os valores brutos, sem agregação.
                 # Mantemos o mesmo comportamento anterior para PIB_PER_CAPITA:

@@ -144,7 +144,7 @@ Endpoint: `GET /ibge/api/v1/kpi/` (ou o caminho configurado no `urls.py`).
 ```json
 {
   "<CÓDIGO_DO_INDICADOR>": {
-    "valor": <número ou dicionário>,
+    "valor": <número ou dicionário ou lista>,
     "nome": "<Nome do indicador>",
     "codigo": "<CÓDIGO DO INDICADOR>"
   },
@@ -152,7 +152,9 @@ Endpoint: `GET /ibge/api/v1/kpi/` (ou o caminho configurado no `urls.py`).
 }
 ```
 
-- **Indicadores do tipo AGGREGATED** (ex.: `POPULACAO`, `PIB`): `valor` → número (soma dos valores de todos os municípios para o ano solicitado, ou de todos os anos se `ano` não for informado).
+- **Indicadores do tipo AGGREGATED** (ex.: `POPULACAO`, `PIB`): 
+  - Se o indicador **não** tiver agrupamento definido (`group_by`), `valor` → número (soma dos valores de todos os municípios para o ano solicitado, ou de todos os anos se `ano` não for informado).
+  - Se o indicador **tiver** agrupamento (como o PIB, que agrupa por estado), `valor` → lista de objetos, cada objeto contendo o nome do grupo e o total agregado. Para o PIB, cada objeto tem `"nome"` (nome do estado) e `"total"` (PIB daquele estado). A lista já vem ordenada do maior para o menor PIB (conforme `order_by="-total"`).
 - **Indicadores do tipo RAW** (ex.: `PIB_PER_CAPITA`): `valor` → dicionário onde a chave é o nome do município e o valor é o número correspondente. Se `ano` for informado, retorna `{municipio: valor}` para aquele ano; caso contrário, retorna `{municipio: {ano: valor, ...}}`.
 
 #### Exemplos de uso
@@ -163,6 +165,7 @@ Endpoint: `GET /ibge/api/v1/kpi/` (ou o caminho configurado no `urls.py`).
 | População de 2021 | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao&ano=2021` | Soma da população de todos os municípios em 2021 |
 | PIB per capita de 2021 | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=pib_per_capita&ano=2021` | Retorna `{ "São Paulo": 5000.0, "Rio de Janeiro": 6000.0 }` |
 | Múltiplos indicadores, ano específico | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao,pib_per_capita&ano=2021` | `POPULACAO` → soma de 2021; `PIB_PER_CAPITA` → dicionário por município (2021) |
+| PIB por estado (ranking) | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=pib&ano=2021` | Retorna lista ordenada de estados com seus PIBs totais (ex: `[{"nome":"São Paulo","total":...}, ...]`) |
 | Indicador inexistente + indicador válido | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao,desconhecido&ano=2021` | Resposta contém `POPULACAO` (valor calculado) e `DESCONHECIDO` (valor `null`), além de `_warnings: "Indicadores não encontrados: DESCONHECIDO"` |
 | String vazia nos indicadores (usa o padrão) | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=` | Mesmo que `/ibge/api/v1/kpi/` – retorna `POPULACAO` (soma de todos) |
 | Lista via repetição | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao&indicadores=pib` | Equivalente a `?indicadores=populacao,pib` |
