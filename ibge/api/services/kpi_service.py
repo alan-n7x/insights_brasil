@@ -1,25 +1,73 @@
-from django.db.models import Sum
+from django.db.models import Sum, Avg, Max, Min, Count
 from ibge.models import Indicador, FatoIndicador
 
 
 class KPIService:
     """
     Camada de serviço para cálculo e retorno de KPIs a partir do modelo FatoIndicador.
-    Encapsula as regras de agregação específicas por indicador.
+    Encapsula as regras de agregação específicas por indicador, distinguindo
+    entre indicadores **RAW** (dados já prontos, sem agregação) e
+    **AGGREGATED** (requerem funções de agregação como Sum, Avg, etc.).
     """
 
-    # Registro de regras de agregação específicas por código de indicador.
-    # Se não estiver presente, a regra padrão é 'soma' (soma do valor entre os municípios para o ano dado).
-    _AGGREGATION_RULES = {
-        # PIB_PER_CAPITA vem pré‑calculado; devemos retornar o valor armazenado
-        # sem nenhuma agregação adicional (sem soma, sem recálculo).
-        'PIB_PER_CAPITA': 'direto',
+    # ----------------------------------------------------------------------
+    # REGISTRO DE REGRAS POR INDICADOR
+    # ----------------------------------------------------------------------
+    # Cada indicador pode ter:
+    #   - type: "raw" ou "aggregated"
+    #   - aggregation (opcional, apenas para type=="aggregated"):
+    #         "sum", "avg", "max", "min", "count"
+    # Se type == "aggregated" e aggregation não for especificado,
+    # o padrão será "sum".
+    # Se type == "raw", aggregation é ignorado.
+    # ----------------------------------------------------------------------
+    KPI_RULES = {
+        # PIB_PER_CAPITA já vem pronto do IBGE; não deve ser somado.
+        "PIB_PER_CAPITA": {
+            "type": "raw"
+        },
+        # POPULACAO precisa ser somada entre municípios (pode ser agregada
+        # por estado, região, etc. conforme a necessidade do consumidor).
+        "POPULACAO": {
+            "type": "aggregated",
+            "aggregation": "sum"
+        },
+        # Exemplo de indicador que poderia ser média (caso exista no futuro):
+        # "IDH_MEDIO": {
+        #     "type": "aggregated",
+        #     "aggregation": "avg"
+        # },
+    }
+
+    # Mapeamento de strings para funções de agregação do Django ORM.
+    _AGGREGATION_FUNCS = {
+        "sum": Sum,
+        "avg": Avg,
+        "max": Max,
+        "min": Min,
+        "count": Count,
     }
 
     @classmethod
-    def _get_aggregation_rule(cls, indicator_codigo: str) -> str:
-        """Retorna a regra de agregação para o código do indicador fornecido."""
-        return cls._AGGREGATION_RULES.get(indicator_codigo, 'soma')
+    def _get_rule(cls, indicator_codigo: str) -> dict:
+        """
+        Retorna a regra de KPI para o código informado.
+        Se o indicador não estiver cadastrado, assume type="aggregated"
+        com aggregation="sum" (compatibilidade com comportamento antigo).
+        """
+        rule = cls.KPI_RULES.get(indicator_codigo)
+        if rule is None:
+            # Fallback para manter compatibilidade com código existente.
+            return {"type": "aggregated", "aggregation": "sum"}
+        return rule
+
+    @classmethod
+    def _apply_aggregation(cls, qs, agg_func):
+        """
+        Aplica a função de agregação ao queryset e retorna o valor escalar.
+        """
+        aggregated = qs.aggregate(total=agg_func('valor'))['total']
+        return float(aggregated) if aggregated is not None else None
 
     @classmethod
     def get_indicators(cls, codigos: list[str], ano: int | None = None) -> dict:
@@ -58,17 +106,19 @@ class KPIService:
             if ano is not None:
                 qs = qs.filter(tempo__ano=ano)
 
-            regra = cls._get_aggregation_rule(codigo)
+            rule = cls._get_rule(codigo)
+            kpi_type = rule.get("type")
+            aggregation_name = rule.get("aggregation")
 
-            if regra == 'soma':
-                # Padrão: soma entre municípios (e quaisquer outras dimensões) para o ano
-                agregado = qs.aggregate(total=Sum('valor'))['total']
-                valor = float(agregado) if agregado is not None else None
-            elif regra == 'direto':
-                # Para indicadores como PIB_PER_CAPITA: retorna o valor armazenado tal como está.
-                # Retorna um mapeamento do nome do município para seu valor.
-                # Se um ano específico for solicitado, mapeia município -> valor.
-                # Se nenhum filtro de ano, aninhe por ano: município -> {ano: valor}.
+            if kpi_type == "aggregated":
+                # Determina a função de agregação; padrão é sum.
+                agg_func_cls = cls._AGGREGATION_FUNCS.get(aggregation_name or "sum", Sum)
+                valor = cls._apply_aggregation(qs, agg_func_cls)
+            elif kpi_type == "raw":
+                # RAW: retorna os valores brutos, sem agregação.
+                # Mantemos o mesmo comportamento anterior para PIB_PER_CAPITA:
+                #   - Se ano informado: dict {municipio: valor}
+                #   - Se ano não informado: dict aninhado {municipio: {ano: valor}}
                 if ano is not None:
                     # Ano único: dicionário simples município -> valor
                     valor = {}
@@ -86,9 +136,8 @@ class KPIService:
                         valor[nome_mun][ano_registro] = float(linha.valor)
                 # Se não houver dados, valor permanece como dicionário vazio
             else:
-                # Fallback para soma caso uma regra desconhecida seja encontrada.
-                agregado = qs.aggregate(total=Sum('valor'))['total']
-                valor = float(agregado) if agregado is not None else None
+                # Tipo desconhecido: fallback para soma (não deve acontecer com regras válidas).
+                valor = cls._apply_aggregation(qs, Sum)
 
             resultado[codigo] = {
                 'valor': valor,

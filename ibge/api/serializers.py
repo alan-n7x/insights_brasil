@@ -74,27 +74,35 @@ class FatoIndicadorDetailSerializer(serializers.ModelSerializer):
 class KpiQuerySerializer(serializers.Serializer):
     """
     Serializer for validating query-string parameters of the KPI endpoint.
-    - ``indicators``: list of indicator codes (case-insensitive).
-    - ``ano``: optional integer year.
-    The ``validate_indicators`` method normalizes each code to upper‑case
-    and strips surrounding whitespace, ensuring compatibility with the
-    database which stores indicator codes in uppercase.
+    - ``indicadores``: lista de códigos de indicadores (case-insensitive).
+      Pode ser uma string separada por vírgula ou uma lista de strings.
+    - ``ano``: ano inteiro opcional.
+    O método ``validate_indicadores`` normaliza cada código para maiúsculas
+    e remove espaços em branco, garantindo compatibilidade com o banco de
+    dados que armazena códigos de indicadores em maiúsculas.
     """
-    indicators = serializers.ListField(
-        child=serializers.CharField(),
+    indicadores = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),
         required=False,
         default=["POPULACAO"]
     )
     ano = serializers.IntegerField(required=False)
 
-    def validate_indicators(self, value):
+    def validate_indicadores(self, value):
         """
-        Normalize each item to upper‑case and strip whitespace.
-        Empty items are ignored; if the resulting list is empty,
-        fall back to the default ["POPULACAO"].
+        Normaliza cada item para maiúsculas e remove espaços em branco.
+        Aceita strings separadas por vírgula dentro da lista.
+        Itens vazios são ignorados; se a lista resultante estiver vazia,
+        retorna o padrão ["POPULACAO"].
         """
-        # Normalize to uppercase and strip whitespace, strip
-        cleaned = [item.strip().upper() for item in value if item.strip()]
-        if not cleaned:
+        result = []
+        for item in value:
+            # Divide por vírgulas para suportar entrada CSV como "populacao,pib_per_capita"
+            parts = item.split(',')
+            for part in parts:
+                part = part.strip()
+                if part:
+                    result.append(part.upper())
+        if not result:
             return ["POPULACAO"]
-        return cleaned
+        return result

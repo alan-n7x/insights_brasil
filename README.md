@@ -120,6 +120,52 @@ Os dados podem ser consultados via:
 - **Python Shell**: Usando models e repositories do Django
 - **Jupyter Notebooks**: Localizados em `ibge/notebooks/`
 - **API REST**: Endpoints genéricos para indicadores (ver acima)
+- **API de KPIs**: Endpoint específico para cálculo e retorno de indicadores chave (KPIs)
+
+### API de KPIs
+
+Endpoint: `GET /ibge/api/v1/kpi/` (ou o caminho configurado no `urls.py`).
+
+#### Parâmetros de query
+
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `indicadores` | `string` ou `list` | Código(s) do indicador. Aceita vírgula para múltiplos valores (ex: `indicadores=populacao,pib_per_capita`). Não diferencia maiúsculas/minúsculas. Se vazio ou não informado, padrão = `POPULACAO`. |
+| `ano` | `integer` (opcional) | Ano para filtrar os fatos. Se omitido, considera **todos os anos** disponíveis. |
+
+**Observações de formatação**
+
+- `indicadores` pode ser passado como uma string separada por vírgulas **ou** como lista repetida (`?indicadores=populacao&indicadores=pib_per_capita`).
+- Espaços em torno das vírgulas são ignorados.
+- Os códigos são convertidos automaticamente para **MAIÚSCULOS** antes da consulta ao banco.
+
+#### Formato da resposta
+
+```json
+{
+  "<CÓDIGO_DO_INDICADOR>": {
+    "valor": <número ou dicionário>,
+    "nome": "<Nome do indicador>",
+    "codigo": "<CÓDIGO DO INDICADOR>"
+  },
+  "_warnings": "Indicadores não encontrados: XXX, YYY"   // presente apenas se houver avisos
+}
+```
+
+- **Indicadores do tipo AGGREGATED** (ex.: `POPULACAO`, `PIB`): `valor` → número (soma dos valores de todos os municípios para o ano solicitado, ou de todos os anos se `ano` não for informado).
+- **Indicadores do tipo RAW** (ex.: `PIB_PER_CAPITA`): `valor` → dicionário onde a chave é o nome do município e o valor é o número correspondente. Se `ano` for informado, retorna `{municipio: valor}` para aquele ano; caso contrário, retorna `{municipio: {ano: valor, ...}}`.
+
+#### Exemplos de uso
+
+| Objetivo | Exemplo de URL | Comentário |
+|----------|----------------|------------|
+| População total (todos os anos) | `http://localhost:8000/ibge/api/v1/kpi/` | Usa o indicador padrão `POPULACAO` |
+| População de 2021 | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao&ano=2021` | Soma da população de todos os municípios em 2021 |
+| PIB per capita de 2021 | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=pib_per_capita&ano=2021` | Retorna `{ "São Paulo": 5000.0, "Rio de Janeiro": 6000.0 }` |
+| Múltiplos indicadores, ano específico | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao,pib_per_capita&ano=2021` | `POPULACAO` → soma de 2021; `PIB_PER_CAPITA` → dicionário por município (2021) |
+| Indicador inexistente + indicador válido | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao,desconhecido&ano=2021` | Resposta contém `POPULACAO` (valor calculado) e `DESCONHECIDO` (valor `null`), além de `_warnings: "Indicadores não encontrados: DESCONHECIDO"` |
+| String vazia nos indicadores (usa o padrão) | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=` | Mesmo que `/ibge/api/v1/kpi/` – retorna `POPULACAO` (soma de todos) |
+| Lista via repetição | `http://localhost:8000/ibge/api/v1/kpi/?indicadores=populacao&indicadores=pib` | Equivalente a `?indicadores=populacao,pib` |
 
 Exemplo de consulta via Python shell:
 
