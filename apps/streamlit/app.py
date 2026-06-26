@@ -46,7 +46,7 @@ st.caption(
 pages = [
     st.Page(
         "pages/home.py",
-        title="Início",
+        title="Dashboard",
         icon="🏠"
     ),
 
