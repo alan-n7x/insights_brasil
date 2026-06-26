@@ -69,3 +69,32 @@ class FatoIndicadorDetailSerializer(serializers.ModelSerializer):
             "municipio",
             "tempo",
         ]
+
+
+class KpiQuerySerializer(serializers.Serializer):
+    """
+    Serializer for validating query-string parameters of the KPI endpoint.
+    - ``indicators``: list of indicator codes (case-insensitive).
+    - ``ano``: optional integer year.
+    The ``validate_indicators`` method normalizes each code to upper‑case
+    and strips surrounding whitespace, ensuring compatibility with the
+    database which stores indicator codes in uppercase.
+    """
+    indicators = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=["POPULACAO"]
+    )
+    ano = serializers.IntegerField(required=False)
+
+    def validate_indicators(self, value):
+        """
+        Normalize each item to upper‑case and strip whitespace.
+        Empty items are ignored; if the resulting list is empty,
+        fall back to the default ["POPULACAO"].
+        """
+        # Normalize to uppercase and strip whitespace, strip
+        cleaned = [item.strip().upper() for item in value if item.strip()]
+        if not cleaned:
+            return ["POPULACAO"]
+        return cleaned

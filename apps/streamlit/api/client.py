@@ -2,7 +2,7 @@
 
 import requests
 
-BASE_URL = "http://127.0.0.1:8000/ibge/api"
+BASE_URL = "http://127.0.0.1:8000/ibge/api/v1"
 
 
 def api_get(endpoint):
@@ -23,3 +23,20 @@ def get_municipios():
 
 def get_indicadores():
     return api_get("indicadores")
+
+
+def get_kpis(indicators, ano=None):
+    params = {
+        "indicators": ",".join(indicators)
+    }
+
+    if ano:
+        params["ano"] = ano
+
+    response = requests.get(
+        f"{BASE_URL}/kpi/",
+        params=params
+    )
+
+    response.raise_for_status()
+    return response.json()

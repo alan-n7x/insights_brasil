@@ -1,3 +1,7 @@
+from django.core.cache import cache
+from django.db.models import Sum
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from rest_framework import viewsets
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -9,7 +13,9 @@ from .serializers import (
     TempoSerializer,
     FatoIndicadorSerializer,
     FatoIndicadorDetailSerializer,
+    KpiQuerySerializer,
 )
+from .services.kpi_service import KPIService
 
 
 class IndicadorViewSet(viewsets.ReadOnlyModelViewSet):
@@ -49,3 +55,25 @@ class FatoIndicadorViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Se for GET /fatos/10/
         return FatoIndicadorDetailSerializer
+
+
+class KpiViewSet(viewsets.ViewSet):
+    def list(self, request):
+        """
+        Retorna os valores dos KPIs solicitados após validação dos parâmetros de consulta.
+        Utiliza o serializer KpiQuerySerializer para validar e normalizar os parâmetros
+        (indicadores e ano) antes de delegar o cálculo ao serviço KPIService.
+        """
+        # Usa o serializer para validar os parâmetros de consulta
+        serializer = KpiQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+
+        codigos = validated.get("indicators", ["POPULACAO"])
+        ano = validated.get("ano")
+
+        # Obtém os dados dos indicadores utilizando o serviço de KPI
+        data = KPIService.get_indicators(codigos=codigos, ano=ano)
+
+        # Retorna os dados (já formatados como dicionário mapeando código para dicionário do indicador)
+        return Response(data)
