@@ -8,7 +8,7 @@ import logging
 
 from ibge.data_ingestion.clients.ibge_client import IBGEClient
 from ibge.data_ingestion.transformers.estado_transformer import EstadoTransformer
-from ibge.data_ingestion.repositories.estado_repository import EstadoRepository
+from ibge.repositories.estado_repository import EstadoRepository
 
 logger = logging.getLogger(__name__)
 

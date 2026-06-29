@@ -125,6 +125,22 @@ def get_ranking(indicador, ano=None, limit=10):
     return api_get(f"{indicador}/ranking", params=params)
 
 
+def get_dashboard_resumo(ano=None):
+    """Obtém todos os dados prontos para o dashboard em uma única chamada.
+
+    Args:
+        ano: Ano de referência (opcional).
+
+    Returns:
+        Dicionário com ano, populacao_total, pib_total, pib_per_capita_medio,
+        populacao_por_regiao e ranking_estados.
+    """
+    params = {}
+    if ano is not None:
+        params["ano"] = ano
+    return api_get("dashboard/resumo", params=params)
+
+
 def get_serie(indicador, estado=None, municipio=None):
     """Obtém a série temporal de um indicador.
 

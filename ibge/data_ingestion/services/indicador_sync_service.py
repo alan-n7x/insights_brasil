@@ -8,7 +8,7 @@ import logging
 
 from ibge.models import Indicador, Municipio
 
-from ibge.data_ingestion.repositories.indicador_municipio_repository import (
+from ibge.repositories.fato_indicador_repository import (
     FatoIndicadorRepository,
 )
 

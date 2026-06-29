@@ -1,8 +1,4 @@
-"""Repositório para persistência de estados no banco de dados.
-
-Responsável pelas operações de criação e atualização dos registros
-de estados a partir dos dados transformados.
-"""
+"""Repositório para persistência de estados no banco de dados."""
 
 import logging
 
@@ -14,7 +10,8 @@ logger = logging.getLogger(__name__)
 class EstadoRepository:
     """Camada de acesso a dados para a entidade Estado."""
 
-    def save_many(self, estados):
+    @staticmethod
+    def save_many(estados):
         """Persiste uma lista de estados utilizando upsert (cria ou atualiza).
 
         Args:
@@ -23,21 +20,13 @@ class EstadoRepository:
         Returns:
             Tupla (total_processado, total_criado) com a contagem de registros.
         """
-
         criados = 0
-
         logger.info("[EstadoRepository] Salvando %s estados", len(estados))
-
         for estado in estados:
-
             _, created = Estado.objects.update_or_create(
                 ibge_id=estado["ibge_id"], defaults=estado
             )
-
             if created:
-
                 criados += 1
-
         logger.info("[EstadoRepository] Criados=%s", criados)
-
         return len(estados), criados

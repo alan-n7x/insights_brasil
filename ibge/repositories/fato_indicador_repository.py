@@ -1,11 +1,37 @@
-"""Repositório somente-leitura para o modelo FatoIndicador."""
+"""Repositório para o modelo FatoIndicador (leitura e escrita)."""
 
 from django.db.models import Sum
 from ibge.models import FatoIndicador, Tempo, Municipio, Indicador
 
 
 class FatoIndicadorRepository:
-    """Repositório para consulta dos fatos (valores) de indicadores por município e tempo."""
+    """Repositório para consulta e persistência dos fatos (valores) de indicadores por município e tempo."""
+
+    @staticmethod
+    def save(municipio, indicador, ano: int, valor: float):
+        """Persiste um valor de indicador para um município em um ano específico.
+
+        Cria o registro Tempo se necessário e realiza upsert em FatoIndicador.
+
+        Args:
+            municipio: Instância do modelo Municipio.
+            indicador: Instância do modelo Indicador.
+            ano: Ano de referência do dado.
+            valor: Valor numérico do indicador.
+
+        Returns:
+            Tupla (objeto, criado) onde criado indica se foi uma inserção nova.
+        """
+        tempo, _ = Tempo.objects.get_or_create(
+            ano=ano, mes=None, trimestre=None
+        )
+        obj, created = FatoIndicador.objects.update_or_create(
+            municipio=municipio,
+            indicador=indicador,
+            tempo=tempo,
+            defaults={"valor": valor}
+        )
+        return obj, created
 
     @staticmethod
     def get_value(municipio: Municipio, indicador: Indicador, ano: int):

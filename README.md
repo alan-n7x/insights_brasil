@@ -67,17 +67,38 @@ Parâmetros: `ano`, `estado` (sigla), `municipio` (código IBGE)
 
 Retorna `{ano, populacao, pib, pib_per_capita}`.
 
-### Indicadores
+### Dashboard (BFF)
 
-`GET /ibge/api/v1/<indicador>/` (lista municipios)
+`GET /ibge/api/v1/dashboard/resumo/` — tudo pronto em 1 chamada:
 
-`GET /ibge/api/v1/<indicador>/ranking/` (ranking por estado)
+```json
+{
+  "ano": 2021,
+  "populacao_total": 213317639,
+  "pib_total": 9000000000000,
+  "pib_per_capita_medio": 42200,
+  "populacao_por_regiao": [
+    {"regiao": "Sudeste", "valor": 89632912}
+  ],
+  "ranking_estados": [
+    {"posicao": 1, "estado": "SP", "valor": 46649132}
+  ]
+}
+```
 
-`GET /ibge/api/v1/<indicador>/serie/` (série temporal)
+### Indicador Genérico
 
-Indicadores: `populacao`, `pib`, `pib_per_capita`
+`GET /ibge/api/v1/indicador/{codigo}/` (lista municipios)
+
+`GET /ibge/api/v1/indicador/{codigo}/ranking/` (ranking por estado)
+
+`GET /ibge/api/v1/indicador/{codigo}/serie/` (série temporal)
+
+Ex: `/indicador/POPULACAO/`, `/indicador/PIB/ranking/`, `/indicador/PIB_PER_CAPITA/serie/`
 
 Parâmetros: `ano`, `estado`, `municipio`, `limit`, `order_by=valor`
+
+Compatibilidade: URLs `/populacao/`, `/pib/`, `/pib-per-capita/` continuam funcionando.
 
 ## Ingestão de Dados
 
@@ -111,9 +132,7 @@ insights_brasil/
 │   └── tests/             17 testes
 ├── apps/streamlit/        Dashboard interativo
 │   ├── api/client.py      Transporte HTTP
-│   ├── services/          Lógica de transformação
 │   ├── components/        Gráficos e cards
-│   ├── utils/             Formatação BRL, geo
 │   └── pages/             home.py, estados.py
 └── docs/                  Documentação técnica
 ```

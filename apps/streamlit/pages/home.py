@@ -3,21 +3,52 @@ import logging
 import streamlit as st
 from components.cards import metric_card
 from components.charts import population_by_region_chart, state_ranking_chart
-from services.dashboard import carregar_resumo, carregar_ranking_estados, carregar_dados_por_regiao
-from utils.formatting import format_int, format_brl
+from api.client import get_dashboard_resumo
 
 logger = logging.getLogger(__name__)
 
+
+def format_int(value):
+    """Formata valor inteiro com abreviação brasileira (mi/bi/tri)."""
+    if not value:
+        return "---"
+    if value >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.2f} bi".replace(".", ",")
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.2f} mi".replace(".", ",")
+    return f"{int(value):,}".replace(",", ".")
+
+
+def format_brl(value):
+    """Formata valor monetário no padrão brasileiro (R$)."""
+    if not value:
+        return "---"
+    if value >= 1_000_000_000_000:
+        return f"R$ {value / 1_000_000_000_000:.2f} tri".replace(".", ",").replace(",", "X").replace(".", ",").replace("X", ".")
+    if value >= 1_000_000_000:
+        return f"R$ {value / 1_000_000_000:.2f} bi".replace(".", ",").replace(",", "X").replace(".", ",").replace("X", ".")
+    if value >= 1_000_000:
+        return f"R$ {value / 1_000_000:.2f} mi".replace(".", ",").replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 st.subheader("Indicadores Principais")
 
-with st.spinner("Carregando indicadores..."):
+with st.spinner("Carregando dados..."):
     try:
-        resumo = carregar_resumo()
-        logger.info("Resumo carregado: pop=%s pib=%s pc=%s", resumo["populacao"], resumo["pib"], resumo["pib_per_capita"])
+        data = get_dashboard_resumo()
+        logger.info("Dashboard carregado: ano=%s pop=%s", data.get("ano"), data.get("populacao_total"))
     except Exception as e:
-        st.error(f"Erro ao carregar resumo: {e}")
-        logger.exception("Falha ao carregar resumo")
-        resumo = {"populacao": 0, "pib": 0, "pib_per_capita": 0}
+        st.error(f"Erro ao carregar dashboard: {e}")
+        logger.exception("Falha ao carregar dashboard")
+        data = {}
+
+resumo = {
+    "ano": data.get("ano", "---"),
+    "populacao": data.get("populacao_total", 0),
+    "pib": data.get("pib_total", 0),
+    "pib_per_capita": data.get("pib_per_capita_medio", 0),
+}
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -32,23 +63,18 @@ with col4:
 st.divider()
 st.subheader("Visão Geral")
 
-with st.spinner("Carregando ranking..."):
-    try:
-        state_data = carregar_ranking_estados(limit=10)
-        logger.info("Ranking carregado: %s estados", len(state_data["Estado"]))
-    except Exception as e:
-        st.error(f"Erro ao carregar ranking: {e}")
-        logger.exception("Falha ao carregar ranking")
-        state_data = {"Estado": [], "Populacao": []}
+regioes = data.get("populacao_por_regiao", [])
+ranking = data.get("ranking_estados", [])
 
-with st.spinner("Carregando dados por região..."):
-    try:
-        region_data = carregar_dados_por_regiao()
-        logger.info("Regiões carregadas")
-    except Exception as e:
-        st.error(f"Erro ao carregar dados regionais: {e}")
-        logger.exception("Falha ao carregar dados regionais")
-        region_data = {"Regiao": [], "Populacao": []}
+region_data = {
+    "Regiao": [r["regiao"] for r in regioes],
+    "Populacao": [int(r["valor"]) for r in regioes],
+}
+
+state_data = {
+    "Estado": [r["estado"] for r in ranking[:10]],
+    "Populacao": [int(r["valor"]) for r in ranking[:10]],
+}
 
 col1, col2 = st.columns(2)
 with col1:

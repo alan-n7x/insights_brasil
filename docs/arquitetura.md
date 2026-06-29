@@ -27,7 +27,7 @@ Dashboard Streamlit (gráficos)
 ```
 ┌──────────────────────────────────────────────────┐
 │  Dashboard Streamlit (apps/streamlit/)           │
-│  pages/ → services/ → api/client.py → HTTP      │
+│  pages/ → api/client.py → HTTP                  │
 ├──────────────────────────────────────────────────┤
 │  API REST (ibge/api/)                            │
 │  views.py → query_engine.py → repositories/     │
@@ -74,29 +74,31 @@ Tempo 1 ────── N FatoIndicador
 
 | Endpoint | Descrição |
 |----------|-----------|
+| `GET /ibge/api/v1/dashboard/resumo/` | BFF: todos os dados prontos (pop, PIB, região, ranking) |
 | `GET /ibge/api/v1/painel/resumo/` | População, PIB, PIB per capita |
-| `GET /ibge/api/v1/populacao/` | Lista de municípios com população |
-| `GET /ibge/api/v1/populacao/ranking/` | Ranking por estado |
-| `GET /ibge/api/v1/populacao/serie/` | Série temporal anual |
-| `GET /ibge/api/v1/pib/` | (idem) |
-| `GET /ibge/api/v1/pib_per_capita/` | (idem) |
+| `GET /ibge/api/v1/indicador/{codigo}/` | Lista municipios p/ qualquer indicador |
+| `GET /ibge/api/v1/indicador/{codigo}/ranking/` | Ranking por estado |
+| `GET /ibge/api/v1/indicador/{codigo}/serie/` | Série temporal anual |
+| `GET /ibge/api/v1/populacao/` | (compatibilidade) |
+| `GET /ibge/api/v1/pib/` | (compatibilidade) |
+| `GET /ibge/api/v1/pib-per-capita/` | (compatibilidade) |
 | `GET /ibge/api/v1/estados/` | Lista de estados |
 | `GET /ibge/api/v1/estados/{sigla}/` | Detalhe do estado |
 | `GET /ibge/api/v1/municipios/{codigo}/` | Detalhe do município |
 | `GET /swagger/` | Documentação interativa |
 | `GET /redoc/` | Documentação ReDoc |
 
-Todos os endpoints de indicador aceitam filtros: `ano`, `estado`, `municipio`, `limit`, `order_by=valor`.
+Filtros em indicadores: `ano`, `estado`, `municipio`, `limit`, `order_by=valor`.
 
 ## Dashboard (`apps/streamlit/`)
 
 ```
 pages/        → Páginas do Streamlit (home.py, estados.py)
-services/     → Transformação de dados entre API e UI
 components/   → Gráficos (Plotly) e cards (st.metric)
-utils/        → Formatação BRL, agregação geográfica
 api/          → Cliente HTTP com logging e timeouts
 ```
+
+O dashboard consome o endpoint BFF (`/dashboard/resumo/`) — zero lógica de negócio no frontend.
 
 - `home.py`: Resumo nacional, ranking de estados, população por região
 - `estados.py`: Detalhes por estado com indicadores e séries
@@ -104,7 +106,8 @@ api/          → Cliente HTTP com logging e timeouts
 ## Decisões Técnicas
 
 - **drf-spectacular**: Geração automática de schema OpenAPI 3 — Swagger e ReDoc sem manutenção manual
-- **ViewSets genéricos**: `IndicadorViewSet` com subclasses (`PopulacaoViewSet`, `PIBViewSet`) — novo indicador = nova subclasse
+- **ViewSet único parametrizado**: `IndicadorViewSet` recebe o código do indicador via URL (`/indicador/{codigo}/`) — novo indicador = só cadastrar no banco
+- **BFF endpoint**: `GET /dashboard/resumo/` entrega dados prontos para o dashboard — frontend vira só camada de apresentação
 - **Batch loading**: `_get_indicator_list` carrega todos os `FatoIndicador` em 1 query (dict) em vez de N+1
 - **Dados derivados**: `PIB_PER_CAPITA` é calculado e armazenado como `FatoIndicador`, não computado em tempo real
 - **Idempotência**: Repositórios usam `update_or_create` — re-executar sync não duplica dados

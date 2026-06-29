@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 
 from ibge.data_ingestion.clients.ibge_client import IBGEClient
 from ibge.data_ingestion.services.municipio_sync_service import MunicipiosService
-from ibge.data_ingestion.repositories.municipios_repository import MunicipioRepository
+from ibge.repositories.municipio_repository import MunicipioRepository
 from ibge.data_ingestion.resolvers.estado_resolver import EstadoResolver
 
 logger = logging.getLogger(__name__)

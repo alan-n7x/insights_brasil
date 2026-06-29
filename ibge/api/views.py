@@ -16,6 +16,7 @@ from .serializers import (
     StateSerializer,
     MunicipalityDetailSerializer,
     ParameterSerializer,
+    DashboardResumoSerializer,
 )
 from ..query_engine import DashboardQuery
 from ..repositories.indicador_repository import IndicadorRepository
@@ -69,6 +70,33 @@ class SummaryView(APIView):
             municipio=municipio,
         )
         serializer = SummarySerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data)
+
+
+class DashboardResumoView(APIView):
+    """Endpoint BFF que retorna todos os dados prontos para o dashboard."""
+
+    @extend_schema(
+        summary="Resumo completo do dashboard",
+        description="Retorna população total, PIB total, PIB per capita médio, população por região e ranking de estados em uma única chamada.",
+        parameters=[
+            OpenApiParameter(
+                name="ano",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+            ),
+        ],
+        responses={200: DashboardResumoSerializer},
+    )
+    def get(self, request):
+        """Retorna o resumo completo do dashboard para o ano informado."""
+        params = ParameterSerializer(data=request.GET)
+        params.is_valid(raise_exception=True)
+        ano = params.validated_data.get("ano")
+        data = DashboardQuery.dashboard_resumo(ano=ano)
+        serializer = DashboardResumoSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
 
@@ -147,29 +175,35 @@ class MunicipalityDetailView(APIView):
 
 class IndicadorViewSet(viewsets.ViewSet):
     """
-    ViewSet genérico para indicadores.
+    ViewSet genérico para indicadores, parametrizado pelo código na URL.
 
     Fornece:
     - list: lista de municípios com valor do indicador (filtros: ano, estado, municipio)
     - ranking: ranking por estado (soma do indicador)
     - serie: série temporal anual (filtros: estado, municipio)
 
-    O indicador específico é definido pela subclasse via `indicator_name`.
+    Uso: GET /api/v1/indicador/POPULACAO/, /api/v1/indicador/POPULACAO/ranking/, etc.
     """
 
     serializer_class = MunicipalityListSerializer
-    indicator_name = None
+    lookup_field = 'codigo'
 
-    def _get_indicator(self):
-        """Retorna a instância de Indicador de acordo com indicator_name."""
-        if not self.indicator_name:
-            raise NotImplementedError("Subclasses must define indicator_name")
-        return getattr(IndicadorRepository, f"get_{self.indicator_name}")()
+    def _get_codigo(self):
+        """Retorna o código do indicador da URL (self.kwargs ou self.request.GET)."""
+        return (self.kwargs.get('codigo') or self.request.GET.get('codigo') or '').upper()
+
+    def _get_indicator(self, codigo):
+        """Retorna a instância de Indicador pelo código ou None."""
+        return IndicadorRepository.get_by_codigo(codigo)
 
     @extend_schema(
-        summary="Listar {indicador} por município",
+        summary="Listar indicador por município",
         description="Retorna os valores do indicador para cada município, com filtros opcionais.",
         parameters=[
+            OpenApiParameter(
+                name="codigo", type=OpenApiTypes.STR, location=OpenApiParameter.PATH, required=True,
+                description="Código do indicador (ex: POPULACAO, PIB)",
+            ),
             OpenApiParameter(
                 name="ano", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False,
             ),
@@ -192,8 +226,9 @@ class IndicadorViewSet(viewsets.ViewSet):
         ],
         responses={200: MunicipalityListSerializer},
     )
-    def list(self, request):
-        """Endpoint que retorna a lista de municípios com valores do indicador."""
+    def list(self, request, codigo=None):
+        """Endpoint: GET /<indicador>/ (lista de municípios)"""
+        codigo = (codigo or self._get_codigo()).upper()
         params = ParameterSerializer(data=request.GET)
         params.is_valid(raise_exception=True)
         ano = params.validated_data.get("ano")
@@ -207,7 +242,7 @@ class IndicadorViewSet(viewsets.ViewSet):
             if not mun:
                 return Response([], status=status.HTTP_200_OK)
             val = DashboardQuery._get_value_for_indicator(
-                self.indicator_name, municipio=municipio, ano=ano
+                codigo.lower(), municipio=municipio, ano=ano
             )
             data = [
                 {
@@ -219,7 +254,7 @@ class IndicadorViewSet(viewsets.ViewSet):
             ]
         else:
             data = DashboardQuery._get_indicator_list(
-                self.indicator_name, ano=ano, estado=estado,
+                codigo.lower(), ano=ano, estado=estado,
                 limit=limite, order_by=order_by,
             )
         serializer = MunicipalityListSerializer(data={"items": data})
@@ -228,40 +263,37 @@ class IndicadorViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], url_path="ranking")
     @extend_schema(
+        summary="Ranking do indicador por estado",
         parameters=[
             OpenApiParameter(
-                name="ano",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
+                name="codigo", type=OpenApiTypes.STR, location=OpenApiParameter.PATH, required=True,
+                description="Código do indicador (ex: POPULACAO, PIB)",
             ),
             OpenApiParameter(
-                name="estado",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                required=False,
+                name="ano", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False,
             ),
             OpenApiParameter(
-                name="limit",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
+                name="estado", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False,
+            ),
+            OpenApiParameter(
+                name="limit", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False,
                 description="Limite máximo de resultados (padrão: 10, mínimo: 1)",
             ),
         ],
         responses={200: RankingItemSerializer(many=True)},
     )
-    def ranking(self, request):
-        """Endpoint que retorna o ranking dos estados por valor do indicador."""
+    def ranking(self, request, codigo=None):
+        """Endpoint: GET /<indicador>/ranking/"""
+        codigo = (codigo or self._get_codigo()).upper()
         params = ParameterSerializer(data=request.GET)
         params.is_valid(raise_exception=True)
         ano = params.validated_data.get("ano")
         limite = params.validated_data.get("limit", 10)
-        ind = self._get_indicator()
+        ind = self._get_indicator(codigo)
         if not ind:
             return Response([])
 
-        if self.indicator_name == "pib_per_capita":
+        if codigo == "PIB_PER_CAPITA":
             summary_data = DashboardQuery.summary(
                 ano=ano,
                 estado=params.validated_data.get("estado"),
@@ -290,9 +322,13 @@ class IndicadorViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["get"], url_path="serie")
     @extend_schema(
-        summary="Série temporal de {indicador}",
+        summary="Série temporal do indicador",
         description="Retorna os valores anuais do indicador, agregados por ano.",
         parameters=[
+            OpenApiParameter(
+                name="codigo", type=OpenApiTypes.STR, location=OpenApiParameter.PATH, required=True,
+                description="Código do indicador (ex: POPULACAO, PIB)",
+            ),
             OpenApiParameter(
                 name="estado", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False,
                 description="Sigla do estado (ex: SP)",
@@ -304,14 +340,15 @@ class IndicadorViewSet(viewsets.ViewSet):
         ],
         responses={200: SeriesItemSerializer(many=True)},
     )
-    def serie(self, request):
-        """Endpoint que retorna a série temporal anual do indicador."""
+    def serie(self, request, codigo=None):
+        """Endpoint: GET /<indicador>/serie/"""
+        codigo = (codigo or self._get_codigo()).upper()
         params = ParameterSerializer(data=request.GET)
         params.is_valid(raise_exception=True)
         estado = params.validated_data.get("estado")
         municipio = params.validated_data.get("municipio")
         data = DashboardQuery.get_time_series(
-            indicator_name=self.indicator_name, estado=estado, municipio=municipio
+            indicator_name=codigo.lower(), estado=estado, municipio=municipio
         )
         serializer = SeriesItemSerializer(data=data, many=True)
         serializer.is_valid(raise_exception=True)
@@ -319,15 +356,21 @@ class IndicadorViewSet(viewsets.ViewSet):
 
 
 class PopulacaoViewSet(IndicadorViewSet):
-    """ViewSet para o indicador de população."""
-    indicator_name = "populacao"
+    """ViewSet para compatibilidade retroativa: GET /populacao/ funciona como /indicador/POPULACAO/."""
+
+    def _get_codigo(self):
+        return "POPULACAO"
 
 
 class PIBViewSet(IndicadorViewSet):
-    """ViewSet para o indicador de PIB."""
-    indicator_name = "pib"
+    """ViewSet para compatibilidade retroativa: GET /pib/ funciona como /indicador/PIB/."""
+
+    def _get_codigo(self):
+        return "PIB"
 
 
 class PIBPerCapitaViewSet(IndicadorViewSet):
-    """ViewSet para o indicador de PIB per capita."""
-    indicator_name = "pib_per_capita"
+    """ViewSet para compatibilidade retroativa: GET /pib-per-capita/ funciona como /indicador/PIB_PER_CAPITA/."""
+
+    def _get_codigo(self):
+        return "PIB_PER_CAPITA"

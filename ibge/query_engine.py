@@ -235,3 +235,71 @@ class DashboardQuery:
                 }
             )
         return resultado
+
+    @staticmethod
+    def get_populacao_por_regiao(ano: int = None) -> List[Dict]:
+        """Retorna a população agregada por região geográfica.
+
+        Args:
+            ano: Ano de referência. Se omitido, usa o ano mais recente.
+
+        Returns:
+            Lista de dicionários com regiao e valor, ordenada por valor decrescente.
+        """
+        ano = ano or DashboardQuery._get_latest_year()
+        ind = DashboardQuery._get_indicator("populacao")
+        if not ind:
+            return []
+
+        from django.db.models import Sum
+
+        qs = (
+            FatoIndicador.objects.filter(
+                indicador=ind,
+                tempo__ano=ano,
+                tempo__mes__isnull=True,
+                tempo__trimestre__isnull=True,
+            )
+            .values("municipio__regiao")
+            .annotate(total=Sum("valor"))
+            .order_by("-total")
+        )
+
+        return [
+            {"regiao": item["municipio__regiao"], "valor": float(item["total"])}
+            for item in qs
+            if item["municipio__regiao"]
+        ]
+
+    @staticmethod
+    def dashboard_resumo(ano: int = None) -> dict:
+        """Retorna todos os dados necessários para o dashboard em uma única chamada.
+
+        Args:
+            ano: Ano de referência. Se omitido, usa o ano mais recente.
+
+        Returns:
+            Dicionário com ano, populacao_total, pib_total, pib_per_capita_medio,
+            populacao_por_regiao e ranking_estados.
+        """
+        ano = ano or DashboardQuery._get_latest_year()
+        summary = DashboardQuery.summary(ano=ano)
+
+        ind_pop = DashboardQuery._get_indicator("populacao")
+        ranking = DashboardQuery.get_ranking_by_estado(ind_pop, ano)
+
+        return {
+            "ano": ano,
+            "populacao_total": int(summary["populacao"]),
+            "pib_total": summary["pib"],
+            "pib_per_capita_medio": summary["pib_per_capita"],
+            "populacao_por_regiao": DashboardQuery.get_populacao_por_regiao(ano),
+            "ranking_estados": [
+                {
+                    "posicao": r["posicao"],
+                    "estado": r["estado"],
+                    "valor": r["valor"],
+                }
+                for r in ranking
+            ],
+        }

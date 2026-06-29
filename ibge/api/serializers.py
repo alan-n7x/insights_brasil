@@ -60,6 +60,29 @@ class MunicipalityDetailSerializer(serializers.Serializer):
     regiao_intermediaria_id = serializers.IntegerField(allow_null=True, required=False)
 
 
+class RegiaoItemSerializer(serializers.Serializer):
+    """Item de população agregada por região."""
+    regiao = serializers.CharField()
+    valor = serializers.FloatField()
+
+
+class RankingEstadoSerializer(serializers.Serializer):
+    """Item do ranking de estados por valor do indicador."""
+    posicao = serializers.IntegerField()
+    estado = serializers.CharField()
+    valor = serializers.FloatField()
+
+
+class DashboardResumoSerializer(serializers.Serializer):
+    """Resumo completo para o dashboard com todos os dados agregados."""
+    ano = serializers.IntegerField()
+    populacao_total = serializers.IntegerField()
+    pib_total = serializers.FloatField()
+    pib_per_capita_medio = serializers.FloatField()
+    populacao_por_regiao = RegiaoItemSerializer(many=True)
+    ranking_estados = RankingEstadoSerializer(many=True)
+
+
 class ParameterSerializer(serializers.Serializer):
     """Serializer para validação dos parâmetros de consulta da API."""
     ano = serializers.IntegerField(required=False)
