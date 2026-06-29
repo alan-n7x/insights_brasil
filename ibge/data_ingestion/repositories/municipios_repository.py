@@ -1,3 +1,9 @@
+"""Repositório para persistência de municípios no banco de dados.
+
+Gerencia o ciclo de vida dos registros de municípios, incluindo
+criação, atualização e consulta.
+"""
+
 import logging
 
 from ibge.models.territorio import Municipio
@@ -6,8 +12,18 @@ logger = logging.getLogger(__name__)
 
 
 class MunicipioRepository:
+    """Camada de acesso a dados para a entidade Municipio."""
 
     def save(self, municipio, estado):
+        """Persiste um município associado a um estado (upsert).
+
+        Args:
+            municipio: Dicionário com os dados do município transformados.
+            estado: Instância do modelo Estado ao qual o município pertence.
+
+        Returns:
+            Tupla (objeto, criado) do update_or_create.
+        """
 
         return Municipio.objects.update_or_create(
             ibge_id=municipio["ibge_id"],

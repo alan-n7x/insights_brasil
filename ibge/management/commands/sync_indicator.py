@@ -1,3 +1,5 @@
+"""Comando de gerenciamento Django para sincronizar indicadores (PIB, população, etc.) da API do IBGE/SIDRA."""
+
 import logging
 import time
 
@@ -13,9 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
+    """Comando que sincroniza dados de um indicador específico para um intervalo de anos."""
 
     def add_arguments(self, parser):
+        """Configura os argumentos obrigatórios e opcionais do comando.
 
+        Args:
+            parser: ArgumentParser do Django.
+        """
         parser.add_argument(
             "--indicator",
             required=True,
@@ -34,7 +41,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **kwargs):
-
+        """Executa a sincronização do indicador no intervalo de anos informado."""
         inicio_execucao = time.perf_counter()
 
         indicator = kwargs["indicator"].upper()
@@ -50,7 +57,6 @@ class Command(BaseCommand):
             ano_fim,
         )
 
-        # Usa factory pattern para obter o service correto
         service = IndicatorResolver.get(indicator)
 
         registros = service.fetch(
@@ -60,7 +66,6 @@ class Command(BaseCommand):
 
         sync = IndicadorSyncService()
 
-        # Get the indicator definition from the resolver
         indicador_def = IndicatorResolver.get_indicator_definition(indicator)
 
         sync.sync(

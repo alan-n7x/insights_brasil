@@ -1,3 +1,5 @@
+"""Testes para o serviço de cálculo de PIB per capita."""
+
 from decimal import Decimal
 
 from django.test import TestCase
@@ -7,8 +9,10 @@ from ibge.data_ingestion.services.pib_per_capita_service import PIBPerCapitaServ
 
 
 class PIBPerCapitaServiceTest(TestCase):
+    """Testes para o cálculo de PIB per capita a partir dos dados de PIB e população."""
 
     def setUp(self):
+        """Configura os dados de teste: estado, município, indicadores de PIB e população."""
         estado = Estado.objects.create(
             ibge_id=35,
             nome="São Paulo",
@@ -36,11 +40,12 @@ class PIBPerCapitaServiceTest(TestCase):
         )
 
     def test_calcula_pib_per_capita(self):
+        """Verifica se o PIB per capita é calculado corretamente dividindo PIB pela população."""
         FatoIndicador.objects.create(
             municipio=self.municipio,
             indicador=self.pib,
             tempo=self.tempo_2022,
-            valor=Decimal("200"),  # Changed from 200000 to 200
+            valor=Decimal("200"),
         )
         FatoIndicador.objects.create(
             municipio=self.municipio,

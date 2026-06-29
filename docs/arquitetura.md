@@ -1,126 +1,119 @@
-# Arquitetura do Projeto Insights Brasil
+# Arquitetura do Projeto — Insight Brasil
 
 ## Objetivo
 
-O Insights Brasil coleta dados públicos do IBGE, persiste esses dados em banco
-local e disponibiliza estruturas para análise de indicadores territoriais.
+Coletar, armazenar e disponibilizar indicadores socioeconômicos do IBGE para análise territorial brasileira, com API REST e dashboard interativo.
 
 ## Fluxo Geral
 
-```text
-IBGE/SIDRA
--> commands de coleta (ibge/management/commands/)
--> banco de dados (SQLite)
--> queries e services (ibge/repository/, ibge/service/, ibge/query_engine/)
--> API endpoints (ibge/views/ ou ibge/query_engine/api_views.py)
+```
+IBGE/SIDRA (APIs públicas)
+  ↓ clients/ (HTTP)
+Transformers (normalização)
+  ↓
+Repositories (persistência idempotente)
+  ↓
+Banco SQLite (Star Schema)
+  ↓
+DashboardQuery (consultas agregadas)
+  ↓
+API REST (serializers + views)
+  ↓
+Dashboard Streamlit (gráficos)
 ```
 
-## Camadas
+## Diagrama de Camadas
 
-### Domínio IBGE
-
-O app `ibge` concentra todo o domínio territorial, incluindo ingestão de dados.
-
-Responsabilidades:
-
-- Modelar estados, municípios e indicadores (Star Schema).
-- Consultar APIs externas do IBGE/SIDRA (clients/).
-- Transformar payloads externos para o formato interno (transformers/).
-- Persistir registros com operações idempotentes (repositories/).
-- Orquestrar coleta de dados (services/).
-- Resolver dependências via Factory pattern (resolvers/).
-
-Exemplos de comandos:
-
-```bash
-python manage.py sync_estados
-python manage.py sync_indicator --indicator POPULACAO --inicio 2022
+```
+┌──────────────────────────────────────────────────┐
+│  Dashboard Streamlit (apps/streamlit/)           │
+│  pages/ → services/ → api/client.py → HTTP      │
+├──────────────────────────────────────────────────┤
+│  API REST (ibge/api/)                            │
+│  views.py → query_engine.py → repositories/     │
+├──────────────────────────────────────────────────┤
+│  Query Engine (ibge/query_engine.py)             │
+│  DashboardQuery: summary, ranking, time series   │
+├──────────────────────────────────────────────────┤
+│  Repositórios (ibge/repositories/)               │
+│  IndicadorRepository, MunicipioRepository,       │
+│  FatoIndicadorRepository                         │
+├──────────────────────────────────────────────────┤
+│  Star Schema (ibge/models/)                      │
+│  Estado, Municipio, Indicador, Tempo,           │
+│  FatoIndicador                                   │
+├──────────────────────────────────────────────────┤
+│  ETL Pipeline (ibge/data_ingestion/)             │
+│  clients/ → transformers/ → services/ → repos   │
+└──────────────────────────────────────────────────┘
 ```
 
-Os comandos antigos de indicadores, como `sync_populacao` e `sync_pib`, foram
-removidos. O fluxo recomendado para indicadores é o command genérico
-`sync_indicator`.
+## Star Schema
 
-### Banco de Dados
-
-As principais entidades são:
-
-- `Estado`: unidade federativa.
-- `Municipio`: município vinculado a um estado.
-- `Indicador`: catálogo de indicadores, como `POPULACAO` ou `PIB`.
-- `Tempo`: dimensão temporal com granularidades (anual, mensal, trimestral).
-- `FatoIndicador`: tabela fato com valor de um indicador por município e tempo.
-
-A tabela `FatoIndicador` é a base analítica do projeto. Ela permite
-adicionar novos indicadores sem criar uma tabela específica para cada métrica.
-Indicadores derivados, como `PIB_PER_CAPITA`, também são gravados nessa mesma
-tabela.
-
-### Consulta de Dados
-
-Os dados podem ser consultados via:
-
-- **Django Admin**: Interface web para visualizar e editar dados
-- **Python Shell**: Usando models e repositories do Django
-- **Jupyter Notebooks**: Localizados em `ibge/notebooks/`
-
-### Consulta Analítica (Query Engine)
-
-Recentemente, adicionamos uma camada de consulta analítica com busca semântica
-e caching, localizada em `ibge/query_engine/`. Essa camada permite:
-
-- Consultas em linguagem natural sobre indicadores territoriais.
-- Uso de embeddings semânticos para entender intenções do usuário.
-- Cache de resultados para melhorar performance em consultas repetidas.
-- Integração com o modelo star schema existente.
-
-A arquitetura da engine de consulta inclui:
-
-- **Modelo Semântico**: Mapeia conceitos de negócio (como "PIB per capita")
-  para entidades do modelo (Indicador, Município, Tempo).
-- **Cache de Consultas**: Armazena resultados de consultas frequentes.
-- **API de Consulta**: Endpoints para consumir as consultas analíticas.
-
-### Serviços de API
-
-Além da engine de consulta, oferecemos endpoints genéricos para indicadores
-via REST em `ibge/views/` e `ibge/query_engine/api_views.py`. Esses endpoints
-permitem:
-
-- Listar indicadores disponíveis.
-- Obter dados de indicadores por município e período.
-- Executar consultas pré-definidas de agregação.
-
-### Estrutura de Pastas
-
-```text
-insights_brasil/
-  core/                 Configuração Django
-  ibge/                 Domínio IBGE completo (ingestão incorporada)
-    models/             Tempo, Estado, Municipio, Indicador, FatoIndicador
-    clients/            Clientes HTTP (IBGEClient, SidraClient)
-    repositories/       Repositórios de dados (persistência)
-    services/           Services de negócio e sync
-    transformers/       Transformadores de dados externos
-    resolvers/          Factory pattern para services
-    definitions/        Catálogo de indicadores SIDRA
-    query_engine/       Arquitetura de consulta com busca semântica e caching
-    views/              Endpoints de API REST para indicadores
-    management/commands/ Commands Django (sync_estados, sync_indicator, etc.)
-    tests/              Testes do app ibge
-    notebooks/          Jupyter notebooks para exploração
-  docs/                 Documentação técnica
-  sql/                  Consultas SQL auxiliares
+```
+Estado 1 ──── N Municipio
+Municipio 1 ─ N FatoIndicador
+Indicador 1 ── N FatoIndicador
+Tempo 1 ────── N FatoIndicador
 ```
 
-## Próximos Passos Técnicos
+`FatoIndicador` é a tabela fato central: valor de um indicador para um município em um período. Suporta granularidades anual, mensal e trimestral via dimensão `Tempo`.
 
-- Ampliar testes unitários para transformers, services e repositories.
-- Ampliar o catálogo de indicadores disponíveis em definitions/.
-- Melhorar a interface da API REST com documentação interativa (Swagger/OpenAPI).
-- Expandir capacidades da engine de consulta (mais tipos de consultas, melhorias no NLP).
-- Adicionar cache para consultas frequentes na engine de consulta.
-- Pré-calcular agregações muito usadas para melhorar performance de dashboards.
-- Implementar dashboard de visualização (Streamlit ou similar).
-- Preparar configuração de produção com variáveis de ambiente.
-- Migrar de SQLite para PostgreSQL para produção.
+## ETL Pipeline (`ibge/data_ingestion/`)
+
+| Camada | Responsabilidade | Exemplo |
+|--------|------------------|---------|
+| clients/ | HTTP requests para APIs externas | IBGEClient, SidraClient |
+| definitions/ | Catálogo de indicadores SIDRA | IndicadorSIDRA |
+| transformers/ | Normalização de payloads externos | PopulationTransformer |
+| repositories/ | Persistência upsert | IndicadorMunicipioRepository |
+| services/ | Orquestração da coleta | IndicadorSyncService |
+| resolvers/ | Factory (service → repositório) | IndicatorResolver |
+
+## API REST (`ibge/api/`)
+
+| Endpoint | Descrição |
+|----------|-----------|
+| `GET /ibge/api/v1/painel/resumo/` | População, PIB, PIB per capita |
+| `GET /ibge/api/v1/populacao/` | Lista de municípios com população |
+| `GET /ibge/api/v1/populacao/ranking/` | Ranking por estado |
+| `GET /ibge/api/v1/populacao/serie/` | Série temporal anual |
+| `GET /ibge/api/v1/pib/` | (idem) |
+| `GET /ibge/api/v1/pib_per_capita/` | (idem) |
+| `GET /ibge/api/v1/estados/` | Lista de estados |
+| `GET /ibge/api/v1/estados/{sigla}/` | Detalhe do estado |
+| `GET /ibge/api/v1/municipios/{codigo}/` | Detalhe do município |
+| `GET /swagger/` | Documentação interativa |
+| `GET /redoc/` | Documentação ReDoc |
+
+Todos os endpoints de indicador aceitam filtros: `ano`, `estado`, `municipio`, `limit`, `order_by=valor`.
+
+## Dashboard (`apps/streamlit/`)
+
+```
+pages/        → Páginas do Streamlit (home.py, estados.py)
+services/     → Transformação de dados entre API e UI
+components/   → Gráficos (Plotly) e cards (st.metric)
+utils/        → Formatação BRL, agregação geográfica
+api/          → Cliente HTTP com logging e timeouts
+```
+
+- `home.py`: Resumo nacional, ranking de estados, população por região
+- `estados.py`: Detalhes por estado com indicadores e séries
+
+## Decisões Técnicas
+
+- **drf-spectacular**: Geração automática de schema OpenAPI 3 — Swagger e ReDoc sem manutenção manual
+- **ViewSets genéricos**: `IndicadorViewSet` com subclasses (`PopulacaoViewSet`, `PIBViewSet`) — novo indicador = nova subclasse
+- **Batch loading**: `_get_indicator_list` carrega todos os `FatoIndicador` em 1 query (dict) em vez de N+1
+- **Dados derivados**: `PIB_PER_CAPITA` é calculado e armazenado como `FatoIndicador`, não computado em tempo real
+- **Idempotência**: Repositórios usam `update_or_create` — re-executar sync não duplica dados
+
+## Pendências / Próximos Passos
+
+- Migrar SQLite → PostgreSQL
+- Ampliar cobertura de testes unitários
+- Adicionar cache Redis para consultas frequentes
+- Expandir catálogo de indicadores (educação, saúde)
+- Autenticação e autorização na API
+- Deploy em produção (Docker, CI/CD)

@@ -1,8 +1,10 @@
+"""Modelos de domínio representando divisões territoriais brasileiras: Estados e Municípios."""
+
 from django.db import models
 
 
-# Create your models here.
 class Estado(models.Model):
+    """Representa um estado brasileiro com código IBGE, nome, sigla e região."""
 
     ibge_id = models.IntegerField(unique=True, db_index=True)
 
@@ -30,6 +32,7 @@ class Estado(models.Model):
 
 
 class Municipio(models.Model):
+    """Representa um município brasileiro com código IBGE, nome e vínculo ao estado."""
 
     ibge_id = models.IntegerField(unique=True, db_index=True)
     nome = models.CharField(max_length=150, db_index=True)

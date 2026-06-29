@@ -1,49 +1,19 @@
-from ibge.models import FatoIndicador, Tempo
+"""Resolver factory para indicadores do IBGE.
+
+Mapeia códigos de indicadores às suas definições SIDRA e
+aos serviços e transformadores adequados para cada tipo.
+"""
+
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class PIBPerCapitaService:
-    """
-    Retorna PIB per capita já calculado pelo IBGE (sem recomputar nada).
-    """
-
-    PIB_PER_CAPITA_CODIGO = "PIB_PER_CAPITA"
-
-    def fetch(self, ano_inicio, ano_fim=None, estado_id=None):
-        ano_fim = ano_fim or ano_inicio
-
-        # Get Tempo objects for the year range
-        tempos = Tempo.objects.filter(
-            ano__gte=ano_inicio,
-            ano__lte=ano_fim,
-            mes=None,
-            trimestre=None
-        )
-
-        qs = FatoIndicador.objects.filter(
-            indicador__codigo=self.PIB_PER_CAPITA_CODIGO,
-            tempo__in=tempos,
-        ).select_related("municipio", "tempo")
-
-        if estado_id:
-            qs = qs.filter(municipio__estado_id=estado_id)
-
-        return [
-            {
-                "ibge_id": item.municipio.ibge_id,
-                "nome": item.municipio.nome,
-                "ano": item.tempo.ano,
-                "valor": float(item.valor),  # já pronto para gráfico
-            }
-            for item in qs.order_by("tempo__ano", "-valor")
-        ]
-
-
 class IndicatorResolver:
-    """
-    Factory pattern para obter o service correto para cada indicador.
+    """Factory que retorna o service correto para cada indicador.
+
+    Mantém mapeamentos internos de indicadores para transformadores
+    e definições SIDRA, inicializados sob demanda.
     """
 
     # Mapeamento de indicadores para transformers

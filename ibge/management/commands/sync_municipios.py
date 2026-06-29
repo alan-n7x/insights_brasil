@@ -1,3 +1,5 @@
+"""Comando de gerenciamento Django para sincronizar municípios brasileiros a partir da API do IBGE."""
+
 import logging
 import time
 
@@ -12,9 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
+    """Comando que sincroniza os municípios do IBGE no banco de dados local."""
 
     def handle(self, *args, **kwargs):
-
+        """Executa a sincronização: busca municípios da API e persiste associando ao estado correspondente."""
         inicio = time.perf_counter()
 
         logger.info("[sync_municipios] Iniciando sync")

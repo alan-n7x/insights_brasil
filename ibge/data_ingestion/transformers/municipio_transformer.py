@@ -1,11 +1,30 @@
+"""Transformador de dados de municípios da API do IBGE.
+
+Converte a estrutura complexa e hierárquica da API de localidades
+do IBGE (com microrregiões, mesorregiões e regiões geográficas)
+no modelo achatado utilizado pelo sistema.
+"""
+
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class MunicipioTransformer:
+    """Transforma dados brutos de município da API IBGE para o formato interno."""
 
     def transform(self, m):
+        """Converte um dicionário de município da API para o formato de persistência.
+
+        Lida com as diferentes estruturas de dados da API (microrregião
+        e regiao-imediata) e extrai as informações hierárquicas.
+
+        Args:
+            m: Dicionário com os dados brutos do município retornados pela API.
+
+        Returns:
+            Dicionário com os campos normalizados do município ou None se inválido.
+        """
 
         logger.debug(
             "[MunicipioTransformer] Transformando municipio=%s",

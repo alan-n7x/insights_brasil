@@ -1,3 +1,4 @@
+"""Configuração de logging do Django com arquivos separados por aplicação."""
 from pathlib import Path
 
 LOG_DIR = Path("logs")

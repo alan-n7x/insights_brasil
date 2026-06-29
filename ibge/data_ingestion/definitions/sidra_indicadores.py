@@ -1,8 +1,26 @@
+"""Definições dos indicadores disponíveis na API SIDRA do IBGE.
+
+Centraliza a configuração de agregados, variáveis e metadados
+de cada indicador consumido pelo sistema, servindo como fonte
+única de verdade para as definições.
+"""
+
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class IndicadorSIDRA:
+    """Representa a definição imutável de um indicador no SIDRA.
+
+    Attributes:
+        agregado: Código do agregado SIDRA.
+        variavel: Código da variável SIDRA.
+        nome: Nome interno do indicador.
+        descricao: Descrição textual do indicador.
+        unidade: Unidade de medida (ex.: Habitantes, Mil Reais).
+        periodicidade: Periodicidade da coleta (ex.: Anual, Mensal).
+        fonte: Nome da fonte dos dados.
+    """
     agregado: int
     variavel: int
     nome: str

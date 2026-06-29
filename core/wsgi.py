@@ -1,9 +1,8 @@
-"""
-WSGI config for core project.
+"""Configuração WSGI para o projeto core.
 
-It exposes the WSGI callable as a module-level variable named ``application``.
+Expõe o callable WSGI como uma variável de módulo chamada ``application``.
 
-For more information on this file, see
+Para mais informações, consulte:
 https://docs.djangoproject.com/en/6.0/howto/deployment/wsgi/
 """
 

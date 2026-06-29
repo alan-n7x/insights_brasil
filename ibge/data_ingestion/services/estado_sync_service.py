@@ -1,3 +1,9 @@
+"""Serviço de sincronização de estados a partir da API do IBGE.
+
+Orquestra o fluxo de busca, transformação e persistência dos
+dados de estados brasileiros.
+"""
+
 import logging
 
 from ibge.data_ingestion.clients.ibge_client import IBGEClient
@@ -8,8 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class EstadoSyncService:
+    """Serviço que coordena a sincronização completa dos estados."""
 
     def __init__(self):
+        """Configura o cliente, transformador e repositório de estados."""
 
         self.client = IBGEClient()
 
@@ -18,6 +26,14 @@ class EstadoSyncService:
         self.repository = EstadoRepository()
 
     def execute(self):
+        """Executa o fluxo completo de sincronização dos estados.
+
+        Busca os estados na API do IBGE, transforma os dados
+        conforme o formato esperado e persiste no banco.
+
+        Returns:
+            Tupla (total_processado, total_criado) com a contagem de registros.
+        """
 
         logger.info("[EstadoSyncService] Buscando estados no IBGE")
 

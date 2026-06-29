@@ -1,3 +1,5 @@
+"""Testes para o cliente HTTP da API do IBGE (IBGEClient)."""
+
 from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
@@ -6,9 +8,11 @@ from ibge.data_ingestion.clients.ibge_client import IBGEClient
 
 
 class IBGEClientTest(SimpleTestCase):
+    """Testes para o cliente de requisições à API externa do IBGE."""
 
     @patch("ibge.data_ingestion.clients.ibge_client.requests.Session")
     def test_get_retorna_json_da_api(self, session_class):
+        """Verifica se o método get retorna o JSON corretamente quando a API responde com sucesso."""
         response = Mock()
         response.status_code = 200
         response.json.return_value = [{"id": 35, "nome": "São Paulo"}]
@@ -31,6 +35,7 @@ class IBGEClientTest(SimpleTestCase):
 
     @patch("ibge.data_ingestion.clients.ibge_client.requests.Session")
     def test_get_repassa_parametros(self, session_class):
+        """Verifica se os parâmetros adicionais são repassados corretamente na requisição."""
         response = Mock()
         response.status_code = 200
         response.json.return_value = []

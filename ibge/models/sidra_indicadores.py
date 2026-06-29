@@ -1,14 +1,13 @@
+"""Modelos de domínio para o esquema estrela (Star Schema) de indicadores: Indicador, Tempo e FatoIndicador."""
+
 from django.db import models
 from .territorio import Municipio
 
 
-# =========================
-# DIMENSÃO: INDICADOR
-# =========================
 class Indicador(models.Model):
-    """
-    Catálogo de indicadores (PIB, POPULACAO, SAUDE, EDUCACAO...)
-    Enriquecido com metadados para melhor documentação e API.
+    """Catálogo de indicadores socioeconômicos (PIB, POPULACAO, SAUDE, EDUCACAO, etc.).
+
+    Armazena metadados como código, nome, descrição, unidade, periodicidade e fonte.
     """
 
     codigo = models.CharField(max_length=50, unique=True, db_index=True)
@@ -48,14 +47,9 @@ class Indicador(models.Model):
     def __str__(self):
         return self.nome
 
-# =========================
-# DIMENSÃO: TEMPO
-# =========================
+
 class Tempo(models.Model):
-    """
-    Dimensão temporal para suportar diferentes granularidades.
-    Permite dados anuais, mensais, trimestrais, semestrais.
-    """
+    """Dimensão temporal para suportar diferentes granularidades (anual, mensal, trimestral)."""
 
     ano = models.IntegerField(db_index=True)
 
@@ -92,13 +86,8 @@ class Tempo(models.Model):
         return str(self.ano)
 
 
-# =========================
-# FATO: INDICADORES POR MUNICÍPIO
-# =========================
 class FatoIndicador(models.Model):
-    """
-    Tabela fato central do BI com Star Schema completo.
-    """
+    """Tabela fato central do esquema estrela, relacionando município, indicador e tempo com um valor."""
 
     municipio = models.ForeignKey(
         Municipio,

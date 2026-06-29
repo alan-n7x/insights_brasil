@@ -1,3 +1,9 @@
+"""Serviço genérico para indicadores da API SIDRA do IBGE.
+
+Implementa o fluxo padronizado de consulta à API SIDRA e
+transformação dos dados para qualquer indicador definido.
+"""
+
 import logging
 import time
 
@@ -7,17 +13,35 @@ logger = logging.getLogger(__name__)
 
 
 class SIDRAIndicatorService:
-    """
-    Service genérico para indicadores SIDRA do IBGE.
-    Pode ser usado para qualquer indicador definido em sidra_indicadores.py.
+    """Serviço genérico para consulta de indicadores SIDRA.
+
+    Pode ser utilizado para qualquer indicador definido no módulo
+    sidra_indicadores.py, delegando a transformação ao respectivo
+    transformador.
     """
 
     def __init__(self, client, transformer, indicador=None):
+        """Inicializa o serviço com cliente, transformador e definição do indicador.
+
+        Args:
+            client: Instância de IBGESidraClient.
+            transformer: Instância do transformador específico do indicador.
+            indicador: Definição do indicador (padrão: PIB para compatibilidade).
+        """
         self.client = client
         self.transformer = transformer
-        self.indicador = indicador or PIB  # Default para PIB para compatibilidade
+        self.indicador = indicador or PIB
 
     def fetch(self, ano_inicio, ano_fim=None):
+        """Busca dados do indicador na API SIDRA e retorna registros transformados.
+
+        Args:
+            ano_inicio: Ano inicial do período.
+            ano_fim: Ano final do período (opcional; se omitido, apenas ano_inicio).
+
+        Returns:
+            Lista de dicionários com registros transformados (ibge_id, ano, valor).
+        """
 
         inicio_execucao = time.perf_counter()
 

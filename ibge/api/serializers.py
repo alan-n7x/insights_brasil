@@ -1,108 +1,71 @@
+"""Serializers da API REST para formatação e validação dos dados de saída."""
+
 from rest_framework import serializers
-from ibge.models import Indicador, Estado, Municipio, Tempo, FatoIndicador
 
 
-class IndicadorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Indicador
-        fields = ["id", "nome", "codigo", "descricao", "unidade", "fonte"]
+class SummarySerializer(serializers.Serializer):
+    """Serializer para o sumário com ano, população, PIB e PIB per capita."""
+    ano = serializers.IntegerField()
+    populacao = serializers.IntegerField()
+    pib = serializers.IntegerField()
+    pib_per_capita = serializers.FloatField()
 
 
-class EstadoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Estado
-        fields = ["id", "nome", "sigla", "ibge_id"]
+class MunicipalityItemSerializer(serializers.Serializer):
+    """Serializer para item de município na listagem de indicadores."""
+    codigo = serializers.IntegerField()
+    nome = serializers.CharField()
+    sigla = serializers.CharField()
+    valor = serializers.FloatField()
 
 
-class MunicipioSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Municipio
-        fields = ["id", "nome", "ibge_id"]
+class MunicipalityListSerializer(serializers.Serializer):
+    """Serializer para lista de municípios com valores de indicador."""
+    items = MunicipalityItemSerializer(many=True)
 
 
-class TempoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Tempo
-        fields = [
-            "id",
-            "ano",
-            "mes",
-            "trimestre",
-        ]
-
-
-class FatoIndicadorSerializer(serializers.ModelSerializer):
-
-    indicador_id = serializers.IntegerField(source="indicador.id", read_only=True)
-    indicador = serializers.CharField(source="indicador.nome", read_only=True)
-
-    municipio_id = serializers.IntegerField(source="municipio.id", read_only=True)
-    municipio = serializers.CharField(source="municipio.nome", read_only=True)
-
-    ano = serializers.IntegerField(source="tempo.ano", read_only=True)
+class RankingItemSerializer(serializers.Serializer):
+    """Serializer para item de ranking por estado."""
+    position = serializers.IntegerField()
+    state = serializers.CharField()
+    value = serializers.FloatField()
 
     class Meta:
-        model = FatoIndicador
-        fields = [
-            "id",
-            "valor",
-            "indicador_id",
-            "indicador",
-            "municipio_id",
-            "municipio",
-            "ano",
-        ]
+        fields = ["position", "state", "value"]
 
 
-class FatoIndicadorDetailSerializer(serializers.ModelSerializer):
-
-    indicador = IndicadorSerializer(read_only=True)
-    municipio = MunicipioSerializer(read_only=True)
-    tempo = TempoSerializer(read_only=True)
-
-    class Meta:
-        model = FatoIndicador
-        fields = [
-            "id",
-            "valor",
-            "indicador",
-            "municipio",
-            "tempo",
-        ]
+class SeriesItemSerializer(serializers.Serializer):
+    """Serializer para item de série temporal anual."""
+    ano = serializers.IntegerField()
+    value = serializers.FloatField()
 
 
-class KpiQuerySerializer(serializers.Serializer):
-    """
-    Serializer for validating query-string parameters of the KPI endpoint.
-    - ``indicadores``: lista de códigos de indicadores (case-insensitive).
-      Pode ser uma string separada por vírgula ou uma lista de strings.
-    - ``ano``: ano inteiro opcional.
-    O método ``validate_indicadores`` normaliza cada código para maiúsculas
-    e remove espaços em branco, garantindo compatibilidade com o banco de
-    dados que armazena códigos de indicadores em maiúsculas.
-    """
-    indicadores = serializers.ListField(
-        child=serializers.CharField(allow_blank=True),
-        required=False,
-        default=["POPULACAO"]
-    )
+class StateSerializer(serializers.Serializer):
+    """Serializer para dados do estado (sigla, nome, região)."""
+    sigla = serializers.CharField()
+    nome = serializers.CharField()
+    regiao = serializers.CharField(allow_null=True, required=False)
+
+
+class MunicipalityDetailSerializer(serializers.Serializer):
+    """Serializer para detalhamento de um município com dados regionais."""
+    codigo = serializers.IntegerField()
+    nome = serializers.CharField()
+    estado = StateSerializer()
+    microrregiao_id = serializers.IntegerField(allow_null=True, required=False)
+    microrregiao_nome = serializers.CharField(allow_null=True, required=False)
+    mesorregiao_id = serializers.IntegerField(allow_null=True, required=False)
+    mesorregiao_nome = serializers.CharField(allow_null=True, required=False)
+    regiao_imediata_id = serializers.IntegerField(allow_null=True, required=False)
+    regiao_intermediaria_id = serializers.IntegerField(allow_null=True, required=False)
+
+
+class ParameterSerializer(serializers.Serializer):
+    """Serializer para validação dos parâmetros de consulta da API."""
     ano = serializers.IntegerField(required=False)
-
-    def validate_indicadores(self, value):
-        """
-        Normaliza cada item para maiúsculas e remove espaços em branco.
-        Aceita strings separadas por vírgula dentro da lista.
-        Itens vazios são ignorados; se a lista resultante estiver vazia,
-        retorna o padrão ["POPULACAO"].
-        """
-        result = []
-        for item in value:
-            # Divide por vírgulas para suportar entrada CSV como "populacao,pib_per_capita"
-            parts = item.split(',')
-            for part in parts:
-                part = part.strip()
-                if part:
-                    result.append(part.upper())
-        if not result:
-            return ["POPULACAO"]
-        return result
+    estado = serializers.CharField(required=False, max_length=2)
+    municipio = serializers.IntegerField(required=False)
+    limit = serializers.IntegerField(required=False, min_value=1)
+    order_by = serializers.ChoiceField(
+        required=False, choices=["valor"], allow_blank=True,
+    )

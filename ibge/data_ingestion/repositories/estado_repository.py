@@ -1,3 +1,9 @@
+"""Repositório para persistência de estados no banco de dados.
+
+Responsável pelas operações de criação e atualização dos registros
+de estados a partir dos dados transformados.
+"""
+
 import logging
 
 from ibge.models.territorio import Estado
@@ -6,8 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 class EstadoRepository:
+    """Camada de acesso a dados para a entidade Estado."""
 
     def save_many(self, estados):
+        """Persiste uma lista de estados utilizando upsert (cria ou atualiza).
+
+        Args:
+            estados: Lista de dicionários com os dados dos estados.
+
+        Returns:
+            Tupla (total_processado, total_criado) com a contagem de registros.
+        """
 
         criados = 0
 
