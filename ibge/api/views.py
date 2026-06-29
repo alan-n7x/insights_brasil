@@ -220,8 +220,12 @@ class IndicadorViewSet(viewsets.ViewSet):
                 description="Limite de resultados",
             ),
             OpenApiParameter(
+                name="nome", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False,
+                description="Filtro por nome do município (LIKE)",
+            ),
+            OpenApiParameter(
                 name="order_by", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False,
-                description='Ordenação: "valor" para decrescente por valor',
+                description='Ordenação: "valor" para decrescente, "asc" para crescente',
             ),
         ],
         responses={200: MunicipalityListSerializer},
@@ -234,6 +238,7 @@ class IndicadorViewSet(viewsets.ViewSet):
         ano = params.validated_data.get("ano")
         estado = params.validated_data.get("estado")
         municipio = params.validated_data.get("municipio")
+        nome = params.validated_data.get("nome")
         limite = params.validated_data.get("limit")
         order_by = params.validated_data.get("order_by")
 
@@ -255,7 +260,7 @@ class IndicadorViewSet(viewsets.ViewSet):
         else:
             data = DashboardQuery._get_indicator_list(
                 codigo.lower(), ano=ano, estado=estado,
-                limit=limite, order_by=order_by,
+                nome=nome, limit=limite, order_by=order_by,
             )
         serializer = MunicipalityListSerializer(data={"items": data})
         serializer.is_valid(raise_exception=True)

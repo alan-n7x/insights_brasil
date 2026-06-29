@@ -51,22 +51,23 @@ class DashboardQuery:
         ind = DashboardQuery._get_indicator(indicator_name)
         if not ind:
             return 0.0
+        fator_escala = get_scale_factor(ind)
         if municipio:
             if not isinstance(municipio, Municipio):
                 mun = MunicipioRepository.get_by_codigo(municipio)
                 if not mun:
                     return 0.0
                 municipio = mun
-            return FatoIndicadorRepository.get_value(municipio, ind, ano) or 0.0
+            return (FatoIndicadorRepository.get_value(municipio, ind, ano) or 0.0) * fator_escala
         else:
             return FatoIndicadorRepository.aggregate_sum(
                 indicador=ind, ano=ano, estado_sigla=estado
-            )
+            ) * fator_escala
 
     @staticmethod
     def _get_indicator_list(
         indicator_name: str, ano: int = None, estado: str = None,
-        limit: int = None, order_by: str = None,
+        nome: str = None, limit: int = None, order_by: str = None,
     ) -> List[Dict]:
         """Retorna lista de municípios com os valores do indicador, com filtros e ordenação.
 
@@ -100,6 +101,8 @@ class DashboardQuery:
         qs = MunicipioRepository.all()
         if estado:
             qs = MunicipioRepository.filter_by_estado(estado)
+        if nome:
+            qs = qs.filter(nome__icontains=nome)
         qs = qs.select_related("estado")
 
         result = []
@@ -116,6 +119,8 @@ class DashboardQuery:
 
         if order_by == "valor":
             result.sort(key=lambda x: x["valor"], reverse=True)
+        elif order_by == "asc":
+            result.sort(key=lambda x: x["valor"])
 
         if limit is not None:
             result = result[:limit]
@@ -143,15 +148,12 @@ class DashboardQuery:
             "pib", municipio=municipio, ano=ano, estado=estado
         )
 
-        ind_pib = DashboardQuery._get_indicator("pib")
-        fator_pib = get_scale_factor(ind_pib)
-        pib_real = pib * fator_pib
-        pib_per_capita = (pib_real / pop) if pop > 0 else 0.0
+        pib_per_capita = (pib / pop) if pop > 0 else 0.0
 
         return {
             "ano": ano,
             "populacao": pop,
-            "pib": pib_real,
+            "pib": pib,
             "pib_per_capita": pib_per_capita,
         }
 

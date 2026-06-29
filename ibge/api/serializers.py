@@ -88,7 +88,8 @@ class ParameterSerializer(serializers.Serializer):
     ano = serializers.IntegerField(required=False)
     estado = serializers.CharField(required=False, max_length=2)
     municipio = serializers.IntegerField(required=False)
+    nome = serializers.CharField(required=False, max_length=100)
     limit = serializers.IntegerField(required=False, min_value=1)
     order_by = serializers.ChoiceField(
-        required=False, choices=["valor"], allow_blank=True,
+        required=False, choices=["valor", "asc"], allow_blank=True,
     )
