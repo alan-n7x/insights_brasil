@@ -1,0 +1,703 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Insights Brasil API",
+        "version": "1.0.0",
+        "description": "API de indicadores territoriais brasileiros (IBGE/SIDRA)"
+    },
+    "paths": {
+        "/ibge/api/v1/estados/": {
+            "get": {
+                "operationId": "ibge_api_v1_estados_list",
+                "description": "Retorna todos os estados brasileiros com sigla, nome e região.",
+                "summary": "Listar estados",
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/State"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/estados/{sigla}/": {
+            "get": {
+                "operationId": "ibge_api_v1_estados_retrieve",
+                "description": "Retorna os dados de um estado específico pela sigla (ex: SP, RJ).",
+                "summary": "Detalhe do estado",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "sigla",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Sigla do estado (ex: SP)",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/State"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/municipios/{codigo}/": {
+            "get": {
+                "operationId": "ibge_api_v1_municipios_retrieve",
+                "description": "Retorna os dados de um município específico pelo código IBGE.",
+                "summary": "Detalhe do município",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "codigo",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Código IBGE do município (ex: 3550308)",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MunicipalityDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/painel/resumo/": {
+            "get": {
+                "operationId": "ibge_api_v1_painel_resumo_retrieve",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "ano",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "estado",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "municipio",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Summary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/pib/": {
+            "get": {
+                "operationId": "ibge_api_v1_pib_list",
+                "description": "Retorna os valores do indicador para cada município, com filtros opcionais.",
+                "summary": "Listar {indicador} por município",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "ano",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "estado",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Sigla do estado (ex: SP)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Limite de resultados"
+                    },
+                    {
+                        "in": "query",
+                        "name": "municipio",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Código IBGE do município"
+                    }
+                ],
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MunicipalityList"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/pib-per-capita/": {
+            "get": {
+                "operationId": "ibge_api_v1_pib_per_capita_list",
+                "description": "Retorna os valores do indicador para cada município, com filtros opcionais.",
+                "summary": "Listar {indicador} por município",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "ano",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "estado",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Sigla do estado (ex: SP)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Limite de resultados"
+                    },
+                    {
+                        "in": "query",
+                        "name": "municipio",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Código IBGE do município"
+                    }
+                ],
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MunicipalityList"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/pib-per-capita/ranking/": {
+            "get": {
+                "operationId": "ibge_api_v1_pib_per_capita_ranking_retrieve",
+                "description": "Endpoint equivalente a /<indicador>/ranking/",
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MunicipalityList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/pib-per-capita/serie/": {
+            "get": {
+                "operationId": "ibge_api_v1_pib_per_capita_serie_retrieve",
+                "description": "Endpoint equivalente a /<indicador>/serie/",
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MunicipalityList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/pib/ranking/": {
+            "get": {
+                "operationId": "ibge_api_v1_pib_ranking_retrieve",
+                "description": "Endpoint equivalente a /<indicador>/ranking/",
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MunicipalityList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/pib/serie/": {
+            "get": {
+                "operationId": "ibge_api_v1_pib_serie_retrieve",
+                "description": "Endpoint equivalente a /<indicador>/serie/",
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MunicipalityList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/populacao/": {
+            "get": {
+                "operationId": "ibge_api_v1_populacao_list",
+                "description": "Retorna os valores do indicador para cada município, com filtros opcionais.",
+                "summary": "Listar {indicador} por município",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "ano",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "estado",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Sigla do estado (ex: SP)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Limite de resultados"
+                    },
+                    {
+                        "in": "query",
+                        "name": "municipio",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Código IBGE do município"
+                    }
+                ],
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/MunicipalityList"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/populacao/ranking/": {
+            "get": {
+                "operationId": "ibge_api_v1_populacao_ranking_retrieve",
+                "description": "Endpoint equivalente a /<indicador>/ranking/",
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MunicipalityList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/ibge/api/v1/populacao/serie/": {
+            "get": {
+                "operationId": "ibge_api_v1_populacao_serie_retrieve",
+                "description": "Endpoint equivalente a /<indicador>/serie/",
+                "tags": [
+                    "ibge"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    },
+                    {
+                        "basicAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MunicipalityList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "MunicipalityDetail": {
+                "type": "object",
+                "properties": {
+                    "codigo": {
+                        "type": "integer"
+                    },
+                    "nome": {
+                        "type": "string"
+                    },
+                    "estado": {
+                        "$ref": "#/components/schemas/State"
+                    },
+                    "microrregiao_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "microrregiao_nome": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "mesorregiao_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "mesorregiao_nome": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "regiao_imediata_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "regiao_intermediaria_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "codigo",
+                    "estado",
+                    "nome"
+                ]
+            },
+            "MunicipalityItem": {
+                "type": "object",
+                "properties": {
+                    "codigo": {
+                        "type": "integer"
+                    },
+                    "nome": {
+                        "type": "string"
+                    },
+                    "sigla": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "valor": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "codigo",
+                    "nome",
+                    "sigla",
+                    "valor"
+                ]
+            },
+            "MunicipalityList": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MunicipalityItem"
+                        }
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
+            "State": {
+                "type": "object",
+                "properties": {
+                    "sigla": {
+                        "type": "string"
+                    },
+                    "nome": {
+                        "type": "string"
+                    },
+                    "regiao": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "nome",
+                    "sigla"
+                ]
+            },
+            "Summary": {
+                "type": "object",
+                "properties": {
+                    "populacao": {
+                        "type": "integer"
+                    },
+                    "pib": {
+                        "type": "integer"
+                    },
+                    "pib_per_capita": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "pib",
+                    "pib_per_capita",
+                    "populacao"
+                ]
+            }
+        },
+        "securitySchemes": {
+            "basicAuth": {
+                "type": "http",
+                "scheme": "basic"
+            },
+            "cookieAuth": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "sessionid"
+            }
+        }
+    }
+}
