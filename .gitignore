@@ -225,6 +225,9 @@ media/
 # SQLite GUI/project files
 *.sqbpro
 
+# Static files (collectstatic output)
+backend/staticfiles/
+
 # Logs
 backend/logs/
 
