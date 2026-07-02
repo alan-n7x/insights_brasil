@@ -67,7 +67,6 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",
     "drf_spectacular",
-    "core",
     "ibge",
     "ibge.api",
     "news",
