@@ -1,7 +1,7 @@
 """Configuração de logging do Django com arquivos separados por aplicação."""
 from pathlib import Path
 
-LOG_DIR = Path("logs")
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 
 LOG_DIR.mkdir(exist_ok=True)
 

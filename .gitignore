@@ -224,3 +224,10 @@ media/
 
 # SQLite GUI/project files
 *.sqbpro
+
+# Logs
+backend/logs/
+
+# Byte-compiled
+__pycache__/
+*.pyc

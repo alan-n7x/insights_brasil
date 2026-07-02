@@ -1,14 +1,12 @@
-"""Cliente HTTP para consumir a API REST do Insight Brasil.
-
-Fornece funções tipadas para acessar endpoints de estados,
-municípios, indicadores, rankings e séries temporais.
-"""
+import os
 import logging
 import requests
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "http://127.0.0.1:8000/ibge/api/v1"
+API_HOST = os.environ.get("INSIGHTS_API_HOST", "127.0.0.1")
+API_PORT = os.environ.get("INSIGHTS_API_PORT", "8000")
+BASE_URL = f"http://{API_HOST}:{API_PORT}/ibge/api/v1"
 
 
 def api_get(endpoint, params=None):

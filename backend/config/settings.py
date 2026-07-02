@@ -1,21 +1,12 @@
-"""Configurações Django do projeto Insight Brasil.
-
-Define apps instalados, banco de dados, middleware, internacionalização,
-arquivos estáticos e integrações com DRF e drf-spectacular.
-
-Gerado por 'django-admin startproject' usando Django 6.0.6.
-
-Para mais informações, consulte:
-https://docs.djangoproject.com/en/6.0/topics/settings/
-https://docs.djangoproject.com/en/6.0/ref/settings/
-"""
+import sys
+from pathlib import Path
 
 import os
-from pathlib import Path
-from core.logging import LOGGING
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+from config.logging import LOGGING
+
+BASE_DIR = Path(__file__).resolve().parent.parent  # backend/
+sys.path.insert(0, str(BASE_DIR / "apps"))
 
 
 def load_env_file(path):
@@ -32,6 +23,7 @@ def load_env_file(path):
 
 
 load_env_file(BASE_DIR / ".env")
+load_env_file(BASE_DIR.parent / ".env")
 
 
 def env_bool(name, default=False):
@@ -75,12 +67,12 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",
     "drf_spectacular",
-    "core_app",
+    "core",
     "ibge",
     "ibge.api",
-    "noticias",
+    "news",
     "ai",
-    "usuarios",
+    "accounts",
 ]
 
 SPECTACULAR_SETTINGS = {
@@ -109,12 +101,12 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "core.urls"
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -126,7 +118,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "core.wsgi.application"
+WSGI_APPLICATION = "config.wsgi.application"
 
 
 # Database

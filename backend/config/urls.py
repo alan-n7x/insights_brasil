@@ -1,8 +1,4 @@
-"""Configuração de URLs do projeto core.
-
-Mapeia as rotas do admin, da API do IBGE e da documentação
-(Swagger, Redoc e schema OpenAPI).
-"""
+"""Configuração de URLs do projeto Insight Brasil."""
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView

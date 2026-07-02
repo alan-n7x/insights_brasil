@@ -2,6 +2,8 @@
 Views da API REST do IBGE em português, utilizando ViewSets para escalabilidade.
 """
 
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, viewsets
@@ -23,6 +25,9 @@ from ..repositories.indicador_repository import IndicadorRepository
 from ..repositories.municipio_repository import MunicipioRepository
 from ..models import Estado
 
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class SummaryView(APIView):
     """View que retorna o sumário com população, PIB e PIB per capita para filtros informados."""
@@ -88,6 +93,7 @@ class DashboardResumoView(APIView):
                 required=False,
             ),
         ],
+        
         responses={200: DashboardResumoSerializer},
     )
     def get(self, request):
@@ -98,6 +104,7 @@ class DashboardResumoView(APIView):
         data = DashboardQuery.dashboard_resumo(ano=ano)
         serializer = DashboardResumoSerializer(data=data)
         serializer.is_valid(raise_exception=True)
+        logger.info("DashboardResumoView: Gerando resumo completo do dashboard")
         return Response(serializer.data)
 
 
