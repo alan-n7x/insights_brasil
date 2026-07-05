@@ -1,15 +1,49 @@
 services:
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-insights_brasil}
+      POSTGRES_USER: ${POSTGRES_USER:-insights_brasil}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-insights_brasil}
+    ports:
+      - "${POSTGRES_PORT_EXTERNAL:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   backend:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile
     ports:
       - "8000:8000"
+    restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
+    environment:
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-insights_brasil}
+      POSTGRES_USER: ${POSTGRES_USER:-insights_brasil}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-insights_brasil}
     volumes:
       - ./backend:/app
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --reload
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
     build:
@@ -17,12 +51,18 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8501:8501"
+    restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     volumes:
       - ./frontend:/app
     environment:
       - INSIGHTS_API_HOST=backend
     command: streamlit run app.py --server.address 0.0.0.0
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

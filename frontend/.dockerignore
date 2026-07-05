@@ -1,0 +1,5 @@
+.env
+.git
+.streamlit
+__pycache__
+*.py[cod]

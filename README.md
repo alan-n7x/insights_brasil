@@ -7,7 +7,7 @@ Plataforma de BI para indicadores socioeconômicos brasileiros. Coleta dados do 
 | Camada | Tecnologia |
 |--------|------------|
 | Backend | Django 6.0 + DRF 3.15 |
-| Banco | SQLite (dev) / PostgreSQL (prod) |
+| Banco | PostgreSQL 17 |
 | API | REST com drf-spectacular (Swagger UI) |
 | Dashboard | Streamlit + Plotly |
 | ETL | Clients HTTP → Transformers → Services → Repositórios |
@@ -24,19 +24,52 @@ API REST (/ibge/api/v1/)
 Dashboard Streamlit (/apps/streamlit/)
 ```
 
-## Requisitos
+## Subir a stack com Docker
 
-- Python 3.12+
-- Ambiente virtual Python
-
-## Configuração Rápida
+- Docker com Compose
 
 ```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Na primeira inicialização, o backend aguarda o PostgreSQL, executa as migrations e
+coleta os arquivos estáticos automaticamente. Os dados ficam persistidos no volume
+`postgres_data`.
+
+Serviços:
+
+- API/Swagger: `http://localhost:8000/swagger/`
+- Healthcheck (inclui banco): `http://localhost:8000/health/`
+- Dashboard: `http://localhost:8501`
+- PostgreSQL: `localhost:5432`
+
+Comandos úteis:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py sync_estados
+docker compose logs -f backend
+docker compose down
+# Remove também os dados locais (operação destrutiva):
+docker compose down -v
+```
+
+As credenciais locais vêm do `.env`. Troque `POSTGRES_PASSWORD` e
+`DJANGO_SECRET_KEY` fora do ambiente de desenvolvimento.
+
+## Desenvolvimento sem Docker para a aplicação
+
+Mantenha apenas o banco no Docker e rode Django/Streamlit no host:
+
+```bash
+cp .env.example .env
+docker compose up -d database
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env
-python manage.py migrate
+source .venv/bin/activate
+pip install -r backend/requirements/production.txt -r backend/requirements/development.txt
+python backend/manage.py migrate
+python backend/manage.py runserver
 ```
 
 ## Servidores
@@ -121,8 +154,8 @@ Indicadores disponíveis: todos em `ibge/data_ingestion/definitions/sidra_indica
 
 ```
 insights_brasil/
-├── core/                  Configuração Django
-├── ibge/                  Domínio IBGE
+├── backend/config/        Configuração e composição Django
+├── backend/apps/ibge/     Domínio IBGE
 │   ├── models/            Star Schema: Estado, Municipio, Indicador, Tempo, FatoIndicador
 │   ├── api/               REST endpoints (views, serializers, urls)
 │   ├── data_ingestion/    ETL pipeline (clients, transformers, services, resolvers)
@@ -130,10 +163,11 @@ insights_brasil/
 │   ├── management/commands/  sync_estados, sync_indicator, sync_municipios
 │   ├── query_engine.py    Consultas agregadas (DashboardQuery)
 │   └── tests/             17 testes
-├── apps/streamlit/        Dashboard interativo
+├── frontend/              Dashboard interativo
 │   ├── api/client.py      Transporte HTTP
 │   ├── components/        Gráficos e cards
 │   └── pages/             home.py, estados.py
+├── docker-compose.yml     PostgreSQL, API e dashboard
 └── docs/                  Documentação técnica
 ```
 

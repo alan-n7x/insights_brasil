@@ -7,7 +7,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install --upgrade pip
-pip install -r backend/requirements/base.txt
+pip install -r backend/requirements/production.txt
 pip install -r backend/requirements/development.txt
 
 cp -n .env.example .env 2>/dev/null || true
