@@ -4,7 +4,8 @@ Utiliza repositórios para buscar dados e aplica a lógica de negócios.
 """
 
 from typing import List, Dict
-from django.db.models import Sum
+from django.db.models import DecimalField, OuterRef, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from ibge.utils import get_scale_factor
 from ibge.repositories.indicador_repository import IndicadorRepository
 from ibge.repositories.municipio_repository import MunicipioRepository
@@ -88,44 +89,42 @@ class DashboardQuery:
 
         fator_escala = get_scale_factor(ind)
 
-        valores = {
-            f.municipio_id: float(f.valor) * fator_escala
-            for f in FatoIndicador.objects.filter(
-                indicador=ind,
-                tempo__ano=ano,
-                tempo__mes__isnull=True,
-                tempo__trimestre__isnull=True,
-            )
-        }
+        valor_do_indicador = FatoIndicador.objects.filter(
+            municipio_id=OuterRef("pk"),
+            indicador=ind,
+            tempo__ano=ano,
+            tempo__mes__isnull=True,
+            tempo__trimestre__isnull=True,
+        ).values("valor")[:1]
 
-        qs = MunicipioRepository.all()
+        qs = MunicipioRepository.all().annotate(
+            valor_indicador=Coalesce(
+                Subquery(valor_do_indicador, output_field=DecimalField()),
+                Value(0, output_field=DecimalField()),
+            )
+        )
         if estado:
-            qs = MunicipioRepository.filter_by_estado(estado)
+            qs = qs.filter(estado__sigla=estado.upper())
         if nome:
             qs = qs.filter(nome__icontains=nome)
         qs = qs.select_related("estado")
-
-        result = []
-        for mun in qs:
-            val = valores.get(mun.id, 0.0)
-            result.append(
-                {
-                    "codigo": mun.ibge_id,
-                    "nome": mun.nome,
-                    "sigla": mun.estado.sigla,
-                    "valor": val,
-                }
-            )
-
         if order_by == "valor":
-            result.sort(key=lambda x: x["valor"], reverse=True)
+            qs = qs.order_by("-valor_indicador", "nome")
         elif order_by == "asc":
-            result.sort(key=lambda x: x["valor"])
+            qs = qs.order_by("valor_indicador", "nome")
 
         if limit is not None:
-            result = result[:limit]
+            qs = qs[:limit]
 
-        return result
+        return [
+            {
+                "codigo": mun.ibge_id,
+                "nome": mun.nome,
+                "sigla": mun.estado.sigla,
+                "valor": float(mun.valor_indicador) * fator_escala,
+            }
+            for mun in qs
+        ]
 
     @staticmethod
     def summary(ano: int = None, estado: str = None, municipio: int = None) -> dict:

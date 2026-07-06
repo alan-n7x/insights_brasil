@@ -171,13 +171,8 @@ class MunicipalityDetailView(APIView):
         mun = MunicipioRepository.get_by_codigo(codigo)
         if not mun:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        data = {
-            "codigo": mun.ibge_id,
-            "nome": mun.nome,
-            "sigla": mun.estado.sigla,
-            "nome_estado": mun.estado.nome,
-        }
-        return Response(data)
+        serializer = MunicipalityDetailSerializer(mun)
+        return Response(serializer.data)
 
 
 class IndicadorViewSet(viewsets.ViewSet):

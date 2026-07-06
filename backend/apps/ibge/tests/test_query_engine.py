@@ -95,3 +95,19 @@ class DashboardQueryTest(TestCase):
         """Verifica se o limite de resultados é respeitado na listagem."""
         data = DashboardQuery._get_indicator_list("populacao", ano=2022, limit=1)
         self.assertEqual(len(data), 1)
+
+    def test_get_indicator_list_ordena_por_valor_no_banco(self):
+        data = DashboardQuery._get_indicator_list(
+            "populacao", ano=2022, limit=1, order_by="valor"
+        )
+
+        self.assertEqual(data[0]["codigo"], self.municipio.ibge_id)
+        self.assertEqual(data[0]["valor"], 10000.0)
+
+    def test_get_indicator_list_mantem_valor_ao_filtrar_estado(self):
+        data = DashboardQuery._get_indicator_list(
+            "populacao", ano=2022, estado="sp", order_by="valor"
+        )
+
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["valor"], 10000.0)

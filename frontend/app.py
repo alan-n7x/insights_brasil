@@ -4,12 +4,13 @@ Exibe indicadores socioeconômicos do Brasil usando dados do IBGE,
 com painéis interativos, gráficos por região e ranking de estados.
 """
 import logging
+import os
 from pathlib import Path
 import streamlit as st
 from PIL import Image
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
 )
 logger = logging.getLogger(__name__)

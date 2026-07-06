@@ -49,7 +49,7 @@ class StateSerializer(serializers.Serializer):
 
 class MunicipalityDetailSerializer(serializers.Serializer):
     """Serializer para detalhamento de um município com dados regionais."""
-    codigo = serializers.IntegerField()
+    codigo = serializers.IntegerField(source="ibge_id", read_only=True)
     nome = serializers.CharField()
     estado = StateSerializer()
     microrregiao_id = serializers.IntegerField(allow_null=True, required=False)
