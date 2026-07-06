@@ -126,10 +126,23 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
+        "NAME": os.getenv("POSTGRES_DB", "insights_brasil"),
+        "USER": os.getenv("POSTGRES_USER", "insights_brasil"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "insights_brasil"),
+        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+        "CONN_HEALTH_CHECKS": True,
     }
 }
+
+# SQLite remains available only as an explicit, lightweight test/local option.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.getenv("SQLITE_NAME", BASE_DIR / "db.sqlite3"),
+    }
 
 
 # Password validation

@@ -13,7 +13,7 @@ Transformers (normalização)
   ↓
 Repositories (persistência idempotente)
   ↓
-Banco SQLite (Star Schema)
+PostgreSQL (Star Schema)
   ↓
 DashboardQuery (consultas agregadas)
   ↓
@@ -105,6 +105,13 @@ O dashboard consome o endpoint BFF (`/dashboard/resumo/`) — zero lógica de ne
 
 ## Decisões Técnicas
 
+- **PostgreSQL 17**: banco único em desenvolvimento e produção, com volume persistente,
+  healthcheck e conexões persistentes verificadas pelo Django
+- **Inicialização idempotente**: o entrypoint aguarda o banco e aplica migrations antes
+  de iniciar o Gunicorn; reinícios não recriam nem duplicam o schema
+- **DDD pragmático**: `ibge` é o bounded context; models representam o domínio e o
+  schema, services orquestram casos de uso, repositories isolam persistência, clients
+  são adaptadores externos e `api` é a camada de apresentação
 - **drf-spectacular**: Geração automática de schema OpenAPI 3 — Swagger e ReDoc sem manutenção manual
 - **ViewSet único parametrizado**: `IndicadorViewSet` recebe o código do indicador via URL (`/indicador/{codigo}/`) — novo indicador = só cadastrar no banco
 - **BFF endpoint**: `GET /dashboard/resumo/` entrega dados prontos para o dashboard — frontend vira só camada de apresentação
@@ -114,7 +121,6 @@ O dashboard consome o endpoint BFF (`/dashboard/resumo/`) — zero lógica de ne
 
 ## Pendências / Próximos Passos
 
-- Migrar SQLite → PostgreSQL
 - Ampliar cobertura de testes unitários
 - Adicionar cache Redis para consultas frequentes
 - Expandir catálogo de indicadores (educação, saúde)
