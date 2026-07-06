@@ -73,14 +73,28 @@ class RankingEstadoSerializer(serializers.Serializer):
     valor = serializers.FloatField()
 
 
+class DashboardMetadataSerializer(serializers.Serializer):
+    """Metadados de disponibilidade e cobertura dos dados do dashboard."""
+    ultima_atualizacao = serializers.DateTimeField(allow_null=True)
+    periodo_inicio = serializers.IntegerField(allow_null=True)
+    periodo_fim = serializers.IntegerField(allow_null=True)
+    municipios_total = serializers.IntegerField()
+    municipios_cobertos = serializers.IntegerField()
+    registros_ausentes = serializers.IntegerField()
+    cobertura_percentual = serializers.FloatField()
+    fontes = serializers.ListField(child=serializers.CharField())
+
+
 class DashboardResumoSerializer(serializers.Serializer):
     """Resumo completo para o dashboard com todos os dados agregados."""
     ano = serializers.IntegerField()
+    anos_disponiveis = serializers.ListField(child=serializers.IntegerField())
     populacao_total = serializers.IntegerField()
     pib_total = serializers.FloatField()
     pib_per_capita_medio = serializers.FloatField()
     populacao_por_regiao = RegiaoItemSerializer(many=True)
     ranking_estados = RankingEstadoSerializer(many=True)
+    metadados = DashboardMetadataSerializer()
 
 
 class ParameterSerializer(serializers.Serializer):

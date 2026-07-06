@@ -111,3 +111,14 @@ class DashboardQueryTest(TestCase):
 
         self.assertEqual(len(data), 2)
         self.assertEqual(data[0]["valor"], 10000.0)
+
+    def test_dashboard_resumo_informa_anos_e_cobertura(self):
+        result = DashboardQuery.dashboard_resumo(ano=2022)
+
+        self.assertEqual(result["anos_disponiveis"], [2022])
+        self.assertEqual(result["metadados"]["periodo_inicio"], 2022)
+        self.assertEqual(result["metadados"]["periodo_fim"], 2022)
+        self.assertEqual(result["metadados"]["municipios_total"], 2)
+        self.assertEqual(result["metadados"]["municipios_cobertos"], 2)
+        self.assertEqual(result["metadados"]["registros_ausentes"], 0)
+        self.assertEqual(result["metadados"]["cobertura_percentual"], 100.0)

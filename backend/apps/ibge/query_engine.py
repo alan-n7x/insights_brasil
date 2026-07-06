@@ -4,13 +4,13 @@ Utiliza repositórios para buscar dados e aplica a lógica de negócios.
 """
 
 from typing import List, Dict
-from django.db.models import DecimalField, OuterRef, Subquery, Sum, Value
+from django.db.models import Count, DecimalField, Max, Min, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from ibge.utils import get_scale_factor
 from ibge.repositories.indicador_repository import IndicadorRepository
 from ibge.repositories.municipio_repository import MunicipioRepository
 from ibge.repositories.fato_indicador_repository import FatoIndicadorRepository
-from ibge.models import FatoIndicador, Municipio
+from ibge.models import FatoIndicador, Indicador, Municipio
 
 
 class DashboardQuery:
@@ -283,14 +283,61 @@ class DashboardQuery:
             Dicionário com ano, populacao_total, pib_total, pib_per_capita_medio,
             populacao_por_regiao e ranking_estados.
         """
-        ano = ano or DashboardQuery._get_latest_year()
+        anos_disponiveis = list(
+            FatoIndicador.objects.filter(
+                tempo__mes__isnull=True,
+                tempo__trimestre__isnull=True,
+            )
+            .values_list("tempo__ano", flat=True)
+            .distinct()
+            .order_by("-tempo__ano")
+        )
+        ano = ano or (anos_disponiveis[0] if anos_disponiveis else DashboardQuery._get_latest_year())
         summary = DashboardQuery.summary(ano=ano)
 
         ind_pop = DashboardQuery._get_indicator("populacao")
         ranking = DashboardQuery.get_ranking_by_estado(ind_pop, ano)
 
+        codigos_principais = ["POPULACAO", "PIB"]
+        indicadores_principais = list(Indicador.objects.filter(codigo__in=codigos_principais))
+        total_municipios = Municipio.objects.count()
+        cobertos = (
+            FatoIndicador.objects.filter(
+                indicador__in=indicadores_principais,
+                tempo__ano=ano,
+                tempo__mes__isnull=True,
+                tempo__trimestre__isnull=True,
+            )
+            .values("municipio_id")
+            .annotate(indicadores=Count("indicador_id", distinct=True))
+            .filter(indicadores=len(indicadores_principais))
+            .count()
+            if indicadores_principais
+            else 0
+        )
+        periodo = FatoIndicador.objects.filter(
+            tempo__mes__isnull=True,
+            tempo__trimestre__isnull=True,
+        ).aggregate(inicio=Min("tempo__ano"), fim=Max("tempo__ano"))
+        ultima_atualizacao = FatoIndicador.objects.filter(
+            tempo__ano=ano,
+            tempo__mes__isnull=True,
+            tempo__trimestre__isnull=True,
+        ).aggregate(valor=Max("atualizado_em"))["valor"]
+
+        fontes = sorted(
+            {
+                indicador.fonte
+                for indicador in indicadores_principais
+                if indicador.fonte
+            }
+        )
+        ausentes = max(total_municipios - cobertos, 0)
+        percentual = (cobertos / total_municipios * 100) if total_municipios else 0.0
+
         return {
             "ano": ano,
+            "anos_disponiveis": anos_disponiveis,
             "populacao_total": int(summary["populacao"]),
             "pib_total": summary["pib"],
             "pib_per_capita_medio": summary["pib_per_capita"],
@@ -303,4 +350,14 @@ class DashboardQuery:
                 }
                 for r in ranking
             ],
+            "metadados": {
+                "ultima_atualizacao": ultima_atualizacao,
+                "periodo_inicio": periodo["inicio"],
+                "periodo_fim": periodo["fim"],
+                "municipios_total": total_municipios,
+                "municipios_cobertos": cobertos,
+                "registros_ausentes": ausentes,
+                "cobertura_percentual": percentual,
+                "fontes": fontes,
+            },
         }
