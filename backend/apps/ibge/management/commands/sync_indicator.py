@@ -3,7 +3,7 @@
 import logging
 import time
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from ibge.data_ingestion.resolvers.indicator_resolver import IndicatorResolver
 
@@ -48,13 +48,17 @@ class Command(BaseCommand):
 
         ano_inicio = kwargs["inicio"]
 
-        ano_fim = kwargs.get("fim") or ano_inicio
+        ano_fim = kwargs.get("fim")
+
+        if ano_fim is not None and ano_fim < ano_inicio:
+            raise CommandError("--fim não pode ser menor que --inicio")
+
+        periodo = str(ano_inicio) if ano_fim is None else f"{ano_inicio}-{ano_fim}"
 
         logger.info(
-            "[sync_indicator] Iniciando sync %s %s-%s",
+            "[sync_indicator] Iniciando sync %s periodo=%s",
             indicator,
-            ano_inicio,
-            ano_fim,
+            periodo,
         )
 
         service = IndicatorResolver.get(indicator)
