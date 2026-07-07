@@ -12,6 +12,7 @@ dependencies = [
     "drf-spectacular==0.27.2",
     "pandas>=2.0",
     "plotly>=5.18",
+    "psycopg2>=2.9.12",
     "python-dateutil==2.9.0.post0",
     "requests==2.32.3",
     "streamlit>=1.28",
