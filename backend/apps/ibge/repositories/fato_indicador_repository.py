@@ -1,7 +1,14 @@
 """Repositório para o modelo FatoIndicador (leitura e escrita)."""
 
+import logging
+
+from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 from ibge.models import FatoIndicador, Tempo, Municipio, Indicador
+
+
+logger = logging.getLogger(__name__)
 
 
 class FatoIndicadorRepository:
@@ -32,6 +39,83 @@ class FatoIndicadorRepository:
             defaults={"valor": valor}
         )
         return obj, created
+
+    @staticmethod
+    def bulk_upsert(
+        registros: list[dict],
+        indicador: Indicador,
+        municipios: dict,
+        batch_size: int = 1000,
+    ) -> tuple[int, int]:
+        """Cria ou atualiza fatos anuais em lote.
+
+        Se a mesma chave municipio/ano aparecer mais de uma vez, o ultimo
+        valor recebido prevalece.
+        """
+        if not registros:
+            logger.info("Nenhum fato de indicador para sincronizar.")
+            return 0, 0
+
+        registros_validos = []
+        ignorados = 0
+        for registro in registros:
+            municipio = municipios.get(registro.get("ibge_id"))
+            ano = registro.get("ano")
+            if municipio is None or ano is None or registro.get("valor") is None:
+                ignorados += 1
+                continue
+            registros_validos.append((municipio, ano, registro["valor"]))
+
+        if not registros_validos:
+            return 0, ignorados
+
+        anos = {ano for _, ano, _ in registros_validos}
+        with transaction.atomic():
+            tempos_por_ano = {
+                tempo.ano: tempo
+                for tempo in Tempo.objects.filter(
+                    ano__in=anos,
+                    mes__isnull=True,
+                    trimestre__isnull=True,
+                )
+            }
+            anos_ausentes = anos - tempos_por_ano.keys()
+            if anos_ausentes:
+                tempos_criados = Tempo.objects.bulk_create(
+                    [Tempo(ano=ano) for ano in anos_ausentes],
+                    batch_size=batch_size,
+                )
+                tempos_por_ano.update({tempo.ano: tempo for tempo in tempos_criados})
+
+            # PostgreSQL rejeita chaves repetidas no mesmo ON CONFLICT.
+            fatos_por_chave = {}
+            agora = timezone.now()
+            for municipio, ano, valor in registros_validos:
+                tempo = tempos_por_ano[ano]
+                fatos_por_chave[(municipio.pk, tempo.pk)] = FatoIndicador(
+                    municipio=municipio,
+                    indicador=indicador,
+                    tempo=tempo,
+                    valor=valor,
+                    atualizado_em=agora,
+                )
+
+            fatos = list(fatos_por_chave.values())
+            FatoIndicador.objects.bulk_create(
+                fatos,
+                batch_size=batch_size,
+                update_conflicts=True,
+                unique_fields=["municipio", "indicador", "tempo"],
+                update_fields=["valor", "atualizado_em"],
+            )
+
+        logger.info(
+            "UPSERT em lote concluido. processados=%s ignorados=%s batch_size=%s",
+            len(fatos),
+            ignorados,
+            batch_size,
+        )
+        return len(fatos), ignorados
 
     @staticmethod
     def get_value(municipio: Municipio, indicador: Indicador, ano: int):

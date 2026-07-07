@@ -28,3 +28,11 @@ class MunicipioResolver:
             Instância de Municipio ou None se não encontrado.
         """
         return self._cache.get(ibge_id)
+
+    def get_many(self, ibge_ids):
+        """Retorna um mapa apenas dos codigos encontrados no cache."""
+        return {
+            ibge_id: self._cache[ibge_id]
+            for ibge_id in set(ibge_ids)
+            if ibge_id in self._cache
+        }
