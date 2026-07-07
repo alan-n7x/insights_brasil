@@ -4,9 +4,14 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-API_HOST = os.environ.get("INSIGHTS_API_HOST", "127.0.0.1")
-API_PORT = os.environ.get("INSIGHTS_API_PORT", "8000")
-BASE_URL = f"http://{API_HOST}:{API_PORT}/ibge/api/v1"
+# API_HOST = os.environ.get("INSIGHTS_API_HOST", "127.0.0.1")
+# API_PORT = os.environ.get("INSIGHTS_API_PORT", "8000")
+# BASE_URL = f"http://{API_HOST}:{API_PORT}/ibge/api/v1"
+
+API_BASE_URL = os.getenv(
+    "INSIGHTS_API_BASE_URL",
+    "http://127.0.0.1:8000/ibge/api/v1",
+).rstrip("/")
 
 
 def api_get(endpoint, params=None):
@@ -24,7 +29,7 @@ def api_get(endpoint, params=None):
         Timeout: Se a requisição exceder o tempo limite.
         HTTPError: Se a API retornar erro HTTP.
     """
-    url = f"{BASE_URL}/{endpoint}/" if not endpoint.startswith("http") else endpoint
+    url = f"{API_BASE_URL}/{endpoint}/" if not endpoint.startswith("http") else endpoint
     logger.debug("GET %s params=%s", url, params)
     try:
         response = requests.get(url, params=params, timeout=10)
