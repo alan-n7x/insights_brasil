@@ -29,9 +29,9 @@ class DashboardQuery:
         return latest.ano if latest else 2023
 
     @staticmethod
-    def _get_indicator(indicator_name: str):
-        """Retorna a instância de Indicador a partir do nome usando o repositório."""
-        return getattr(IndicadorRepository, f"get_{indicator_name}")()
+    def _get_indicator(indicator_code: str):
+        """Retorna um indicador pelo código, sem exigir métodos específicos no repositório."""
+        return IndicadorRepository.get_by_codigo(indicator_code.upper())
 
     @staticmethod
     def _get_value_for_indicator(

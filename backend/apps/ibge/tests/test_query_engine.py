@@ -28,6 +28,9 @@ class DashboardQueryTest(TestCase):
         self.ind_pib = Indicador.objects.create(
             codigo="PIB", nome="PIB", unidade="Mil Reais"
         )
+        self.ind_idh = Indicador.objects.create(
+            codigo="IDH", nome="Índice de Desenvolvimento Humano", unidade="Índice"
+        )
         self.tempo = Tempo.objects.create(ano=2022, mes=None, trimestre=None)
 
         FatoIndicador.objects.create(
@@ -53,6 +56,12 @@ class DashboardQueryTest(TestCase):
             indicador=self.ind_pib,
             tempo=self.tempo,
             valor=Decimal("100"),
+        )
+        FatoIndicador.objects.create(
+            municipio=self.municipio,
+            indicador=self.ind_idh,
+            tempo=self.tempo,
+            valor=Decimal("0.805"),
         )
 
     def test_summary_nacional(self):
@@ -82,6 +91,15 @@ class DashboardQueryTest(TestCase):
         self.assertEqual(len(serie), 1)
         self.assertEqual(serie[0]["ano"], 2022)
         self.assertEqual(serie[0]["valor"], 15000.0)
+
+    def test_consulta_indicador_generico_sem_metodo_dedicado(self):
+        """Um indicador cadastrado deve funcionar sem get_<codigo> no repositório."""
+        lista = DashboardQuery._get_indicator_list("idh", ano=2022, order_by="valor")
+        serie = DashboardQuery.get_time_series("IDH", municipio=self.municipio.ibge_id)
+
+        self.assertEqual(lista[0]["codigo"], self.municipio.ibge_id)
+        self.assertEqual(lista[0]["valor"], 0.805)
+        self.assertEqual(serie, [{"ano": 2022, "valor": 0.805}])
 
     def test_get_indicator_list_nacional(self):
         """Verifica se a lista nacional de indicadores retorna todos os municípios."""

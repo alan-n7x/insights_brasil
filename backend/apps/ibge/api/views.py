@@ -354,9 +354,13 @@ class IndicadorViewSet(viewsets.ViewSet):
         params.is_valid(raise_exception=True)
         estado = params.validated_data.get("estado")
         municipio = params.validated_data.get("municipio")
-        data = DashboardQuery.get_time_series(
+        series = DashboardQuery.get_time_series(
             indicator_name=codigo.lower(), estado=estado, municipio=municipio
         )
+        data = [
+            {"ano": item["ano"], "value": item["valor"]}
+            for item in series
+        ]
         serializer = SeriesItemSerializer(data=data, many=True)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data)
